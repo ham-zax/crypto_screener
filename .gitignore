@@ -78,6 +78,11 @@ coverage.xml
 # Documentation builds
 docs/_build/
 
+# Integration test reports and redundant files
+phase7_integration_test_report_*.json
+phase7_integration_test.log
+test_browser_debug.html
+
 # Flask
 instance/
 .webassets-cache
