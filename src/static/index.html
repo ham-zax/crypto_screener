@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Project Screener</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input[type="text"],
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .project-list {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .project-item {
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .project-item h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Crypto Project Screener</h1>
+
+        <h2>Add New Project</h2>
+        <form id="addProjectForm">
+            <div class="form-group">
+                <label for="name">Project Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="hot_sector">Hot Sector:</label>
+                <input type="text" id="hot_sector" name="hot_sector">
+            </div>
+            <div class="form-group">
+                <label for="value_proposition">Value Proposition:</label>
+                <textarea id="value_proposition" name="value_proposition"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="backing_team">Backing & Team:</label>
+                <textarea id="backing_team" name="backing_team"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="initial_float">Initial Float:</label>
+                <input type="text" id="initial_float" name="initial_float">
+            </div>
+            <div class="form-group">
+                <label for="real_utility">Real Utility:</label>
+                <textarea id="real_utility" name="real_utility"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="fair_launch_vesting">Fair Launch / Vesting:</label>
+                <textarea id="fair_launch_vesting" name="fair_launch_vesting"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="macro_accumulation_divergence">Macro Accumulation Divergence:</label>
+                <input type="text" id="macro_accumulation_divergence" name="macro_accumulation_divergence">
+            </div>
+            <div class="form-group">
+                <label for="spot_cvd_ma_cvd">Spot CVD / MA-CVD:</label>
+                <input type="text" id="spot_cvd_ma_cvd" name="spot_cvd_ma_cvd">
+            </div>
+            <div class="form-group">
+                <label for="market_structure_shift_retest">Market Structure Shift / Retest:</label>
+                <input type="text" id="market_structure_shift_retest" name="market_structure_shift_retest">
+            </div>
+            <button type="submit" class="btn">Add Project</button>
+        </form>
+
+        <div class="project-list">
+            <h2>Existing Projects</h2>
+            <div id="projectsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const addProjectForm = document.getElementById('addProjectForm');
+            const projectsContainer = document.getElementById('projectsContainer');
+
+            // Function to fetch and display projects
+            async function fetchProjects() {
+                const response = await fetch('/api/projects');
+                const data = await response.json();
+                projectsContainer.innerHTML = ''; // Clear existing projects
+                data.projects.forEach(project => {
+                    const projectItem = document.createElement('div');
+                    projectItem.classList.add('project-item');
+                    projectItem.innerHTML = `
+                        <h3>${project.name}</h3>
+                        <p><strong>Hot Sector:</strong> ${project.hot_sector || 'N/A'}</p>
+                        <p><strong>Value Proposition:</strong> ${project.value_proposition || 'N/A'}</p>
+                        <p><strong>Backing & Team:</strong> ${project.backing_team || 'N/A'}</p>
+                        <p><strong>Initial Float:</strong> ${project.initial_float || 'N/A'}</p>
+                        <p><strong>Real Utility:</strong> ${project.real_utility || 'N/A'}</p>
+                        <p><strong>Fair Launch / Vesting:</strong> ${project.fair_launch_vesting || 'N/A'}</p>
+                        <p><strong>Macro Accumulation Divergence:</strong> ${project.macro_accumulation_divergence || 'N/A'}</p>
+                        <p><strong>Spot CVD / MA-CVD:</strong> ${project.spot_cvd_ma_cvd || 'N/A'}</p>
+                        <p><strong>Market Structure Shift / Retest:</strong> ${project.market_structure_shift_retest || 'N/A'}</p>
+                        <button class="btn delete-btn" data-id="${project.id}">Delete</button>
+                    `;
+                    projectsContainer.appendChild(projectItem);
+                });
+                attachDeleteListeners();
+            }
+
+            // Function to attach delete event listeners
+            function attachDeleteListeners() {
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.onclick = async (event) => {
+                        const projectId = event.target.dataset.id;
+                        const response = await fetch(`/api/projects/${projectId}`, {
+                            method: 'DELETE'
+                        });
+                        const result = await response.json();
+                        alert(result.message);
+                        fetchProjects(); // Refresh the list
+                    };
+                });
+            }
+
+            // Handle form submission for adding a new project
+            addProjectForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const formData = new FormData(addProjectForm);
+                const projectData = {};
+                formData.forEach((value, key) => {
+                    projectData[key] = value;
+                });
+
+                const response = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(projectData)
+                });
+                const result = await response.json();
+                alert(result.message);
+                addProjectForm.reset(); // Clear the form
+                fetchProjects(); // Refresh the list
+            });
+
+            // Initial fetch of projects when the page loads
+            fetchProjects();
+        });
+    </script>
+</body>
+</html>
+
+
