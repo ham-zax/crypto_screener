@@ -143,6 +143,50 @@ class MigrationRunner:
             logger.error(f"Failed to get migration files: {e}")
             return []
     
+    def _split_sql_statements(self, sql: str) -> List[str]:
+        """
+        Intelligently split SQL into statements, handling triggers, procedures, and functions
+        
+        Args:
+            sql: SQL content to split
+            
+        Returns:
+            List of individual SQL statements
+        """
+        statements = []
+        current_statement = ""
+        in_block = False
+        block_depth = 0
+        
+        lines = sql.split('\n')
+        for line in lines:
+            stripped = line.strip().upper()
+            current_statement += line + '\n'
+            
+            # Track nested blocks (like triggers with BEGIN/END)
+            if 'BEGIN' in stripped:
+                in_block = True
+                block_depth += 1
+            
+            if 'END' in stripped:
+                block_depth -= 1
+                if block_depth <= 0:
+                    in_block = False
+                    block_depth = 0
+            
+            # If we hit a semicolon and we're not in a block, this is a statement end
+            if ';' in line and not in_block:
+                statement = current_statement.strip()
+                if statement and statement != ';':
+                    statements.append(statement)
+                current_statement = ""
+        
+        # Add any remaining statement
+        if current_statement.strip():
+            statements.append(current_statement.strip())
+        
+        return [stmt for stmt in statements if stmt.strip() and stmt.strip() != ';']
+
     def _execute_sql_safely(self, sql: str, migration_name: str) -> Tuple[bool, Optional[str]]:
         """
         Execute SQL with proper transaction handling and error recovery
@@ -154,32 +198,35 @@ class MigrationRunner:
         Returns:
             (success, error_message)
         """
-        connection = self.engine.connect()
-        transaction = connection.begin()
-        
         try:
-            # Split SQL into individual statements for better error reporting
-            statements = [stmt.strip() for stmt in sql.split(';') if stmt.strip()]
+            # Split SQL into statements intelligently (handles triggers, procedures, etc.)
+            statements = self._split_sql_statements(sql)
             
-            for i, statement in enumerate(statements):
-                try:
-                    connection.execute(text(statement))
-                    logger.debug(f"Executed statement {i+1}/{len(statements)} for {migration_name}")
-                except Exception as e:
-                    logger.error(f"Failed at statement {i+1} in {migration_name}: {statement[:100]}...")
-                    raise
+            # Use autocommit for DDL statements (CREATE TABLE, CREATE INDEX, etc.)
+            with self.engine.connect() as connection:
+                # Start transaction for atomicity
+                with connection.begin():
+                    for i, statement in enumerate(statements):
+                        try:
+                            # Clean up the statement
+                            clean_statement = statement.strip()
+                            if not clean_statement or clean_statement == ';':
+                                continue
+                                
+                            # Execute each statement separately
+                            connection.execute(text(clean_statement))
+                            logger.debug(f"Executed statement {i+1}/{len(statements)} for {migration_name}")
+                        except Exception as e:
+                            logger.error(f"Failed at statement {i+1} in {migration_name}: {clean_statement[:100]}...")
+                            raise
             
-            transaction.commit()
             logger.info(f"Successfully executed migration: {migration_name}")
             return True, None
             
         except Exception as e:
-            transaction.rollback()
             error_msg = f"Migration {migration_name} failed: {str(e)}"
             logger.error(error_msg)
             return False, error_msg
-        finally:
-            connection.close()
     
     def apply_migration(self, migration_file: Path) -> Dict:
         """

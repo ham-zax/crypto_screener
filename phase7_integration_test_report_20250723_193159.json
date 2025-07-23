@@ -1,0 +1,57 @@
+{
+  "phase": "Phase 7 - Integration & Testing",
+  "timestamp": "2025-07-23T19:31:59.958077",
+  "execution_summary": {
+    "total_execution_time_seconds": 0.1,
+    "total_tests": 0,
+    "passed": 0,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "success_rate": 0,
+    "setup_failed": true
+  },
+  "suite_results": {},
+  "v2_specification_compliance": {
+    "total_v2_requirements": 17,
+    "validated_requirements": 0,
+    "compliance_percentage": 0.0,
+    "validated": {},
+    "missing": {
+      "US-04": "Automated Project Ingestion",
+      "US-06": "CSV Data Analysis",
+      "AS-01": "Narrative Score Calculation",
+      "AS-01a": "Sector Strength Scoring",
+      "AS-01b": "Backing & Team Default Score",
+      "AS-01c": "Value Proposition Default Score",
+      "AS-02": "Tokenomics Score Calculation",
+      "AS-02a": "Valuation Potential Scoring",
+      "AS-02b": "Token Utility Default Score",
+      "AS-02c": "Supply Risk Scoring",
+      "AS-03": "Data Score from CSV",
+      "AS-03a": "CSV Parsing Requirements",
+      "AS-03b": "Accumulation Signal Algorithm",
+      "AS-05": "Omega Score State Management",
+      "BR-06": "CoinGecko API Requirement",
+      "BR-07": "API Failure Handling",
+      "BR-09": "CSV UI Requirements"
+    }
+  },
+  "environment_info": {
+    "python_version": "3.10.4 (tags/v3.10.4:9d38120, Mar 23 2022, 23:13:41) [MSC v.1929 64 bit (AMD64)]",
+    "platform": "win32",
+    "cwd": "C:\\Users\\Hamza\\Downloads\\crypto_screener",
+    "v2_dependencies": {
+      "flask": true,
+      "requests": true,
+      "pandas": true,
+      "scipy": true,
+      "sqlalchemy": true,
+      "redis": true,
+      "celery": true
+    },
+    "database_available": true,
+    "api_server_running": true
+  },
+  "detailed_results": []
+}

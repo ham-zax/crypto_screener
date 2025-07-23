@@ -124,7 +124,7 @@ class Phase7TestOrchestrator:
     
     def run_comprehensive_testing(self) -> Dict[str, Any]:
         """Run comprehensive integration testing"""
-        logger.info("🚀 Starting Phase 7 - Integration & Testing")
+        logger.info("Starting Phase 7 - Integration & Testing")
         logger.info("=" * 80)
         
         self.start_time = time.time()
@@ -151,7 +151,7 @@ class Phase7TestOrchestrator:
         
         # Execute test plan
         for suite_name, test_function in test_plan:
-            logger.info(f"\n📋 Running {suite_name}...")
+            logger.info(f"\nREPORT Running {suite_name}...")
             
             suite_start = time.time()
             try:
@@ -164,12 +164,12 @@ class Phase7TestOrchestrator:
                 suite_time = int((time.time() - suite_start) * 1000)
                 
                 if passed == total:
-                    logger.info(f"✅ {suite_name}: {passed}/{total} tests passed ({suite_time}ms)")
+                    logger.info(f"OK {suite_name}: {passed}/{total} tests passed ({suite_time}ms)")
                 else:
-                    logger.warning(f"⚠️ {suite_name}: {passed}/{total} tests passed ({suite_time}ms)")
+                    logger.warning(f"WARNING {suite_name}: {passed}/{total} tests passed ({suite_time}ms)")
                     
             except Exception as e:
-                logger.error(f"❌ {suite_name} failed with exception: {e}")
+                logger.error(f"X {suite_name} failed with exception: {e}")
                 self.results.append(TestResult(
                     test_name=f"Suite Exception: {suite_name}",
                     suite=suite_name.lower().replace(' ', '_'),
@@ -184,7 +184,7 @@ class Phase7TestOrchestrator:
     
     def _setup_test_environment(self) -> Dict[str, Any]:
         """Setup testing environment"""
-        logger.info("🔧 Setting up test environment...")
+        logger.info("Setting up test environment...")
         
         setup_results = {}
         
@@ -225,16 +225,16 @@ class Phase7TestOrchestrator:
                     import requests
                     response = requests.get('http://localhost:5000/api/v2/health', timeout=2)
                     if response.status_code == 200:
-                        logger.info("✅ Flask server started successfully")
+                        logger.info("OK Flask server started successfully")
                         return {'success': True, 'message': 'Server started'}
                 except:
                     time.sleep(1)
             
-            logger.error("❌ Failed to start Flask server")
+            logger.error("X Failed to start Flask server")
             return {'success': False, 'message': 'Server startup timeout'}
             
         except Exception as e:
-            logger.error(f"❌ Server startup failed: {e}")
+            logger.error(f"X Server startup failed: {e}")
             return {'success': False, 'message': str(e)}
     
     def _initialize_test_database(self) -> Dict[str, Any]:
@@ -246,14 +246,14 @@ class Phase7TestOrchestrator:
             result = initialize_database(run_migrations=True, seed_data=True)
             
             if result['success']:
-                logger.info("✅ Test database initialized")
+                logger.info("OK Test database initialized")
                 return {'success': True, 'message': 'Database initialized'}
             else:
-                logger.error(f"❌ Database initialization failed: {result.get('error')}")
+                logger.error(f"X Database initialization failed: {result.get('error')}")
                 return {'success': False, 'message': result.get('error', 'Unknown error')}
                 
         except Exception as e:
-            logger.error(f"❌ Database initialization exception: {e}")
+            logger.error(f"X Database initialization exception: {e}")
             return {'success': False, 'message': str(e)}
     
     def _prepare_test_data(self) -> Dict[str, Any]:
@@ -266,11 +266,11 @@ class Phase7TestOrchestrator:
             # Create additional CSV test files for comprehensive testing
             self._create_comprehensive_csv_test_files(test_data_dir)
             
-            logger.info("✅ Test data prepared")
+            logger.info("OK Test data prepared")
             return {'success': True, 'message': 'Test data prepared'}
             
         except Exception as e:
-            logger.error(f"❌ Test data preparation failed: {e}")
+            logger.error(f"X Test data preparation failed: {e}")
             return {'success': False, 'message': str(e)}
     
     def _create_comprehensive_csv_test_files(self, test_dir: Path):
@@ -1044,14 +1044,14 @@ class Phase7TestOrchestrator:
         with open(report_file, 'w') as f:
             json.dump(report, f, indent=2)
         
-        logger.info(f"📋 Detailed test report saved to: {report_file}")
+        logger.info(f"REPORT Detailed test report saved to: {report_file}")
         
         return report
     
     def _print_final_summary(self, report: Dict[str, Any]):
         """Print comprehensive test summary"""
         print("\n" + "=" * 80)
-        print("🎯 PHASE 7 - INTEGRATION & TESTING RESULTS")
+        print("[TARGET] PHASE 7 - INTEGRATION & TESTING RESULTS")
         print("=" * 80)
         
         summary = report['execution_summary']
@@ -1059,13 +1059,13 @@ class Phase7TestOrchestrator:
         
         # Overall results
         if summary['success_rate'] >= 95:
-            status_icon = "✅"
+            status_icon = "OK"
             status_text = "EXCELLENT"
         elif summary['success_rate'] >= 80:
-            status_icon = "⚠️"
+            status_icon = "WARNING"
             status_text = "GOOD"
         else:
-            status_icon = "❌"
+            status_icon = "X"
             status_text = "NEEDS IMPROVEMENT"
         
         print(f"\n{status_icon} OVERALL STATUS: {status_text}")
@@ -1075,51 +1075,51 @@ class Phase7TestOrchestrator:
         print(f"Execution Time: {summary['total_execution_time_seconds']}s")
         
         # V2 Specification Compliance
-        print(f"\n📋 V2 SPECIFICATION COMPLIANCE: {compliance['compliance_percentage']}%")
+        print(f"\nREPORT V2 SPECIFICATION COMPLIANCE: {compliance['compliance_percentage']}%")
         print(f"Validated Requirements: {compliance['validated_requirements']}/{compliance['total_v2_requirements']}")
         
         if compliance['validated']:
-            print("\n✅ VALIDATED V2 REQUIREMENTS:")
+            print("\nOK VALIDATED V2 REQUIREMENTS:")
             for req_id, desc in compliance['validated'].items():
                 print(f"  {req_id}: {desc}")
         
         if compliance['missing']:
-            print("\n❌ MISSING V2 REQUIREMENTS:")
+            print("\nX MISSING V2 REQUIREMENTS:")
             for req_id, desc in compliance['missing'].items():
                 print(f"  {req_id}: {desc}")
         
         # Suite breakdown
-        print("\n📊 SUITE BREAKDOWN:")
+        print("\n[STATS] SUITE BREAKDOWN:")
         for suite_name, suite_data in report['suite_results'].items():
-            suite_icon = "✅" if suite_data['success_rate'] >= 90 else "⚠️" if suite_data['success_rate'] >= 70 else "❌"
+            suite_icon = "OK" if suite_data['success_rate'] >= 90 else "WARNING" if suite_data['success_rate'] >= 70 else "X"
             print(f"  {suite_icon} {suite_name.replace('_', ' ').title()}: {suite_data['success_rate']}% ({suite_data['passed']}/{suite_data['total']})")
         
         # Key findings
-        print("\n🔍 KEY FINDINGS:")
+        print("\n[SEARCH] KEY FINDINGS:")
         
         # Check critical requirements
         critical_reqs = ['US-04', 'US-06', 'AS-05']
         validated_critical = [req for req in critical_reqs if req in compliance['validated']]
         
         if len(validated_critical) == len(critical_reqs):
-            print("  ✅ All critical user stories validated")
+            print("  OK All critical user stories validated")
         else:
             missing_critical = [req for req in critical_reqs if req not in validated_critical]
-            print(f"  ❌ Missing critical requirements: {missing_critical}")
+            print(f"  X Missing critical requirements: {missing_critical}")
         
         # Performance check
         perf_results = [r for r in report['detailed_results'] if r['suite'] == 'performance_testing']
         if perf_results and any(r['status'] == 'passed' for r in perf_results):
-            print("  ✅ Performance requirements met")
+            print("  OK Performance requirements met")
         else:
-            print("  ⚠️ Performance testing needs attention")
+            print("  WARNING Performance testing needs attention")
         
         # V1 compatibility
         compat_results = [r for r in report['detailed_results'] if r['suite'] == 'v1_compatibility']
         if compat_results and any(r['status'] == 'passed' for r in compat_results):
-            print("  ✅ V1 compatibility preserved")
+            print("  OK V1 compatibility preserved")
         else:
-            print("  ⚠️ V1 compatibility needs verification")
+            print("  WARNING V1 compatibility needs verification")
         
         print("\n" + "=" * 80)
         
@@ -1128,10 +1128,10 @@ class Phase7TestOrchestrator:
             print("🎉 PHASE 7 INTEGRATION & TESTING: SUCCESSFUL")
             print("The V2 implementation meets all critical requirements and is ready for production.")
         elif summary['success_rate'] >= 80 and compliance['compliance_percentage'] >= 75:
-            print("⚠️ PHASE 7 INTEGRATION & TESTING: MOSTLY SUCCESSFUL")
+            print("WARNING PHASE 7 INTEGRATION & TESTING: MOSTLY SUCCESSFUL")
             print("The V2 implementation is functional but has some areas that need attention.")
         else:
-            print("❌ PHASE 7 INTEGRATION & TESTING: NEEDS WORK")
+            print("X PHASE 7 INTEGRATION & TESTING: NEEDS WORK")
             print("The V2 implementation requires significant fixes before production readiness.")
         
         print("=" * 80)

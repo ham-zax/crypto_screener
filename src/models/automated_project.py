@@ -10,9 +10,16 @@ from datetime import datetime
 from sqlalchemy import Column, String, Float, Boolean, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from ..database.config import Base
 
-class AutomatedProject(Base):
+# Try to import Flask-SQLAlchemy db, fallback to pure SQLAlchemy Base
+try:
+    from ..database.config import db
+    BaseClass = db.Model
+except (ImportError, AttributeError):
+    from ..database.config import Base
+    BaseClass = Base
+
+class AutomatedProject(BaseClass):
     """
     Main project model supporting both manual (V1) and automated (V2) projects
     
@@ -182,7 +189,7 @@ class AutomatedProject(Base):
         return f"<AutomatedProject(name='{self.name}', ticker='{self.ticker}', source='{self.data_source}')>"
 
 
-class CSVData(Base):
+class CSVData(BaseClass):
     """
     Model for tracking CSV data uploads and analysis results
     

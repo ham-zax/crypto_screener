@@ -1,0 +1,73 @@
+{
+  "dev-project-fetch": {
+    "task": "src.tasks.scheduled_tasks.fetch_and_update_projects",
+    "schedule_type": "interval",
+    "schedule_value": {
+      "hours": 6
+    },
+    "args": [],
+    "kwargs": {
+      "filters": {
+        "min_market_cap": 10000000,
+        "max_results": 100,
+        "min_volume_24h": 500000
+      },
+      "save_to_database": true
+    },
+    "options": {
+      "queue": "data_fetch",
+      "priority": 8
+    },
+    "created_at": "2025-07-23T14:08:44.211379",
+    "enabled": true
+  },
+  "dev-daily-cleanup": {
+    "task": "src.tasks.scheduled_tasks.cleanup_old_data",
+    "schedule_type": "interval",
+    "schedule_value": {
+      "days": 1
+    },
+    "args": [],
+    "kwargs": {
+      "days_to_keep": 7
+    },
+    "options": {
+      "queue": "maintenance",
+      "priority": 3
+    },
+    "created_at": "2025-07-23T14:08:44.212378",
+    "enabled": true
+  },
+  "dev-health-check": {
+    "task": "src.tasks.scheduled_tasks.health_check_task",
+    "schedule_type": "interval",
+    "schedule_value": {
+      "minutes": 30
+    },
+    "args": [],
+    "kwargs": {},
+    "options": {
+      "queue": "monitoring",
+      "priority": 5
+    },
+    "created_at": "2025-07-23T14:08:44.213378",
+    "enabled": true
+  },
+  "dev-test-task": {
+    "task": "src.tasks.scheduled_tasks.test_task",
+    "schedule_type": "interval",
+    "schedule_value": {
+      "minutes": 10
+    },
+    "args": [
+      "Development test task"
+    ],
+    "kwargs": {},
+    "options": {
+      "queue": "default",
+      "priority": 1
+    },
+    "created_at": "2025-07-23T14:08:44.214378",
+    "enabled": true
+  }
+}

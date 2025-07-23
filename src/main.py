@@ -39,6 +39,10 @@ if V2_DEPENDENCIES_AVAILABLE:
         db = SQLAlchemy(app)
         migrate = Migrate(app, db)
         
+        # Set db object in config for model access
+        from .database import config as db_config_module
+        db_config_module.db = db
+        
         # Enhanced database initialization with migration support
         with app.app_context():
             try:

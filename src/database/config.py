@@ -14,6 +14,9 @@ from urllib.parse import quote_plus
 # Create the declarative base for models
 Base = declarative_base()
 
+# Flask-SQLAlchemy db object will be set by Flask app
+db = None
+
 class DatabaseConfig:
     """Database configuration manager"""
     
