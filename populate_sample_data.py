@@ -17,23 +17,23 @@ def populate_sample_automated_projects():
         import uuid
         
         # Initialize database tables first
-        print("🔧 Initializing database tables...")
+        print("Initializing database tables...")
         init_db()
         
         # Create session
         session = get_session()
         
-        print("🔄 Checking existing automated projects...")
+        print("Checking existing automated projects...")
         
         # Check if automated projects already exist
         existing_count = session.query(AutomatedProject).filter_by(data_source='automated').count()
         print(f"Found {existing_count} existing automated projects")
         
         if existing_count > 0:
-            print("✅ Automated projects already exist in database")
+            print("Automated projects already exist in database")
             return
         
-        print("🌱 Creating sample automated projects...")
+        print("Creating sample automated projects...")
         
         # Sample automated projects with realistic data
         sample_projects = [
@@ -43,8 +43,6 @@ def populate_sample_automated_projects():
                 'coingecko_id': 'bitcoin',
                 'category': 'L1',
                 'market_cap': 850000000000,
-                'price_usd': 43500.0,
-                'volume_24h': 15000000000,
                 'narrative_score': 9.2,
                 'tokenomics_score': 8.8,
                 'sector_strength': 9.5,
@@ -53,7 +51,8 @@ def populate_sample_automated_projects():
                 'valuation_potential': 7.5,
                 'token_utility': 9.0,
                 'supply_risk': 9.5,
-                'has_data_score': False
+                'has_data_score': False,
+                'created_via': 'api_ingestion'
             },
             {
                 'name': 'Ethereum',
@@ -61,8 +60,6 @@ def populate_sample_automated_projects():
                 'coingecko_id': 'ethereum',
                 'category': 'L1',
                 'market_cap': 290000000000,
-                'price_usd': 2420.0,
-                'volume_24h': 8500000000,
                 'narrative_score': 8.8,
                 'tokenomics_score': 8.5,
                 'sector_strength': 9.0,
@@ -71,7 +68,8 @@ def populate_sample_automated_projects():
                 'valuation_potential': 8.0,
                 'token_utility': 8.8,
                 'supply_risk': 7.8,
-                'has_data_score': False
+                'has_data_score': False,
+                'created_via': 'api_ingestion'
             },
             {
                 'name': 'Chainlink',
@@ -79,8 +77,6 @@ def populate_sample_automated_projects():
                 'coingecko_id': 'chainlink',
                 'category': 'Infrastructure',
                 'market_cap': 8500000000,
-                'price_usd': 14.20,
-                'volume_24h': 450000000,
                 'narrative_score': 8.5,
                 'tokenomics_score': 7.8,
                 'sector_strength': 8.5,
@@ -89,7 +85,8 @@ def populate_sample_automated_projects():
                 'valuation_potential': 7.5,
                 'token_utility': 8.5,
                 'supply_risk': 7.5,
-                'has_data_score': False
+                'has_data_score': False,
+                'created_via': 'api_ingestion'
             },
             {
                 'name': 'Arbitrum',
@@ -97,8 +94,6 @@ def populate_sample_automated_projects():
                 'coingecko_id': 'arbitrum',
                 'category': 'L2',
                 'market_cap': 2100000000,
-                'price_usd': 0.52,
-                'volume_24h': 185000000,
                 'narrative_score': 7.8,
                 'tokenomics_score': 7.2,
                 'sector_strength': 8.0,
@@ -107,7 +102,8 @@ def populate_sample_automated_projects():
                 'valuation_potential': 8.5,
                 'token_utility': 7.0,
                 'supply_risk': 6.5,
-                'has_data_score': False
+                'has_data_score': False,
+                'created_via': 'api_ingestion'
             },
             {
                 'name': 'Render',
@@ -115,8 +111,6 @@ def populate_sample_automated_projects():
                 'coingecko_id': 'render-token',
                 'category': 'AI',
                 'market_cap': 1800000000,
-                'price_usd': 4.85,
-                'volume_24h': 125000000,
                 'narrative_score': 8.2,
                 'tokenomics_score': 7.5,
                 'sector_strength': 9.0,
@@ -125,7 +119,8 @@ def populate_sample_automated_projects():
                 'valuation_potential': 8.8,
                 'token_utility': 8.2,
                 'supply_risk': 6.8,
-                'has_data_score': False
+                'has_data_score': False,
+                'created_via': 'api_ingestion'
             },
             {
                 'name': 'Helium',
@@ -133,8 +128,6 @@ def populate_sample_automated_projects():
                 'coingecko_id': 'helium',
                 'category': 'DePIN',
                 'market_cap': 750000000,
-                'price_usd': 4.92,
-                'volume_24h': 28000000,
                 'narrative_score': 7.5,
                 'tokenomics_score': 7.8,
                 'sector_strength': 8.5,
@@ -143,7 +136,8 @@ def populate_sample_automated_projects():
                 'valuation_potential': 8.2,
                 'token_utility': 8.5,
                 'supply_risk': 7.0,
-                'has_data_score': False
+                'has_data_score': False,
+                'created_via': 'api_ingestion'
             }
         ]
         
@@ -151,10 +145,8 @@ def populate_sample_automated_projects():
         for project_data in sample_projects:
             # Add required fields
             project_data.update({
-                'id': str(uuid.uuid4()),
+                'id': uuid.uuid4(),
                 'data_source': 'automated',
-                'created_at': datetime.now(timezone.utc),
-                'updated_at': datetime.now(timezone.utc),
                 'accumulation_signal': None,
                 'data_score': None,
                 'omega_score': None
@@ -172,12 +164,12 @@ def populate_sample_automated_projects():
         session.commit()
         session.close()
         
-        print(f"✅ Created {created_count} sample automated projects")
-        print("📊 Projects are in 'Awaiting Data' state - ready for CSV analysis")
-        print("🚀 The 'Automated' tab should now show projects!")
+        print(f"Created {created_count} sample automated projects")
+        print("Projects are in 'Awaiting Data' state - ready for CSV analysis")
+        print("The 'Automated' tab should now show projects!")
         
     except Exception as e:
-        print(f"❌ Error creating sample data: {e}")
+        print(f"Error creating sample data: {e}")
         import traceback
         traceback.print_exc()
 
@@ -191,33 +183,33 @@ def check_database_status():
         
         # Test connection
         with engine.connect() as conn:
-            print("✅ Database connection successful")
+            print("Database connection successful")
         
         # Check table existence
         from sqlalchemy import inspect
         inspector = inspect(engine)
         tables = inspector.get_table_names()
-        print(f"📊 Found {len(tables)} tables: {tables}")
+        print(f"Found {len(tables)} tables: {tables}")
         
         if 'automated_projects' in tables:
-            print("✅ automated_projects table exists")
+            print("automated_projects table exists")
         else:
-            print("❌ automated_projects table missing")
+            print("automated_projects table missing")
             
     except Exception as e:
-        print(f"❌ Database check failed: {e}")
+        print(f"Database check failed: {e}")
 
 if __name__ == "__main__":
-    print("🧪 Sample Data Population Script")
+    print("Sample Data Population Script")
     print("=" * 50)
     
-    print("\n1️⃣ Checking database status...")
+    print("\n1. Checking database status...")
     check_database_status()
     
-    print("\n2️⃣ Populating sample automated projects...")
+    print("\n2. Populating sample automated projects...")
     populate_sample_automated_projects()
     
-    print("\n🎯 Next Steps:")
+    print("\nNext Steps:")
     print("1. Refresh the browser (Ctrl+Shift+R)")
     print("2. Click on the 'Automated Projects' tab")
     print("3. You should see 6 sample projects in 'Awaiting Data' state")

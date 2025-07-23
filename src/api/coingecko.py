@@ -8,10 +8,8 @@ Based on V2 specification requirements for automated project ingestion.
 import requests
 import time
 import logging
-from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timedelta
+from typing import List, Dict, Optional
 import json
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -197,24 +195,39 @@ class CoinGeckoClient:
             logger.error(f"Failed to fetch coins list: {e}")
             raise APIError(f"Failed to fetch coins list: {e}")
     
-    def get_coin_data(self, coin_id: str) -> Dict:
+    def get_coin_data(
+        self, 
+        coin_id: str,
+        localization: bool = False,
+        tickers: bool = False,
+        market_data: bool = True,
+        community_data: bool = False,
+        developer_data: bool = False,
+        sparkline: bool = False
+    ) -> Dict:
         """
         Get detailed market data for a specific coin
         
         Args:
             coin_id: CoinGecko coin identifier
+            localization: Include localized data
+            tickers: Include tickers data
+            market_data: Include market data
+            community_data: Include community data
+            developer_data: Include developer data
+            sparkline: Include sparkline data
             
         Returns:
             Detailed coin data dictionary
         """
         try:
             params = {
-                "localization": "false",
-                "tickers": "false",
-                "market_data": "true",
-                "community_data": "false",
-                "developer_data": "false",
-                "sparkline": "false"
+                "localization": str(localization).lower(),
+                "tickers": str(tickers).lower(),
+                "market_data": str(market_data).lower(),
+                "community_data": str(community_data).lower(),
+                "developer_data": str(developer_data).lower(),
+                "sparkline": str(sparkline).lower()
             }
             
             data = self._make_request(f"coins/{coin_id}", params)
@@ -224,6 +237,38 @@ class CoinGeckoClient:
         except Exception as e:
             logger.error(f"Failed to fetch data for {coin_id}: {e}")
             raise APIError(f"Failed to fetch coin data: {e}")
+    
+    def get_coin_market_chart_range(
+        self,
+        coin_id: str,
+        vs_currency: str,
+        from_timestamp: int,
+        to_timestamp: int
+    ) -> Dict:
+        """
+        Get historical market data for a coin within a specific date range.
+
+        Args:
+            coin_id: The coin's ID.
+            vs_currency: The target currency.
+            from_timestamp: The start of the date range (Unix timestamp).
+            to_timestamp: The end of the date range (Unix timestamp).
+
+        Returns:
+            A dictionary containing prices, market caps, and total volumes.
+        """
+        try:
+            params = {
+                "vs_currency": vs_currency,
+                "from": from_timestamp,
+                "to": to_timestamp,
+            }
+            data = self._make_request(f"coins/{coin_id}/market_chart/range", params)
+            logger.debug(f"Fetched market chart data for {coin_id}")
+            return data
+        except Exception as e:
+            logger.error(f"Failed to fetch market chart data for {coin_id}: {e}")
+            raise APIError(f"Failed to fetch market chart data for {coin_id}: {e}")
     
     def get_markets_data(
         self, 
@@ -302,13 +347,6 @@ class CoinGeckoClient:
                     # No more data available
                     break
                 
-                # Apply market cap filter if specified
-                if min_market_cap:
-                    page_data = [
-                        coin for coin in page_data 
-                        if coin.get('market_cap') and coin['market_cap'] >= min_market_cap
-                    ]
-                
                 all_data.extend(page_data)
                 
                 # Check if we got less than requested (last page)
@@ -340,9 +378,11 @@ class CoinGeckoClient:
             if self._is_cache_valid(timestamp)
         )
         
+        cache_hit_rate = (valid_entries / max(total_entries, 1)) * 100
+        
         return {
             "total_entries": total_entries,
             "valid_entries": valid_entries,
-            "cache_hit_rate": f"{(valid_entries / max(total_entries, 1)) * 100:.1f}%",
+            "cache_hit_rate": f"{cache_hit_rate:.1f}%",
             "cache_ttl_seconds": self.cache_ttl
         }

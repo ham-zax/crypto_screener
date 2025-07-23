@@ -145,6 +145,9 @@ class DataFetchingService:
                 batch_end = min(batch_start + batch_size, total_projects)
                 batch = filtered_markets[batch_start:batch_end]
                 
+                logger.info(f"--- Starting batch {batch_start//batch_size + 1}/{(total_projects-1)//batch_size + 1} ---")
+                logger.info(f"Batch range: projects {batch_start + 1}-{batch_end}")
+
                 # Update progress
                 progress_percent = 20 + int((batch_start / total_projects) * 70)
                 if task_id:
@@ -155,18 +158,22 @@ class DataFetchingService:
                         f"Processing batch {batch_start//batch_size + 1}/{(total_projects-1)//batch_size + 1}..."
                     )
                 
-                logger.info(f"Processing batch {batch_start//batch_size + 1}: projects {batch_start + 1}-{batch_end}")
-                
                 # Process batch
                 batch_processed, batch_errors = self._process_project_batch(
                     batch, include_detailed_data, task_id
                 )
                 
+                logger.info(f"Batch {batch_start//batch_size + 1} processed: {len(batch_processed)} projects, {len(batch_errors)} errors")
+                if batch_errors:
+                    for err in batch_errors:
+                        logger.error(f"Batch error: {err}")
+
                 processed_projects.extend(batch_processed)
                 errors.extend(batch_errors)
                 
                 # Rate limiting between batches
                 if batch_end < total_projects:
+                    logger.debug(f"Sleeping for 0.5s between batches")
                     time.sleep(0.5)  # Brief pause between batches
             
             # Final progress update
@@ -366,28 +373,33 @@ class DataFetchingService:
         
         for i, market in enumerate(markets_batch):
             try:
+                logger.info(f"Processing project {i+1}/{len(markets_batch)}: {market.id}")
                 # Optionally fetch detailed data
                 coin_details = None
                 if include_detailed_data:
                     try:
                         coin_details = self._fetch_coin_details(market.id)
+                        logger.debug(f"Fetched details for {market.id}")
                     except Exception as e:
                         logger.warning(f"Failed to fetch details for {market.id}: {e}")
                 
                 # Process and score the project
                 project_data = self._process_project(market, coin_details)
+                logger.info(f"Project processed: {market.id}")
                 processed_projects.append(project_data)
                 
                 # Brief pause to respect rate limits
                 if i > 0 and i % 10 == 0:
+                    logger.debug(f"Sleeping for 0.1s after processing 10 projects")
                     time.sleep(0.1)
             
             except Exception as e:
                 error_msg = f"Failed to process {market.id}: {e}"
-                logger.error(error_msg)
+                logger.error(error_msg, exc_info=True)
                 errors.append(error_msg)
                 continue
         
+        logger.info(f"Batch completed: {len(processed_projects)} projects, {len(errors)} errors")
         return processed_projects, errors
     
     def _fetch_coin_details(self, coingecko_id: str) -> Optional[CoinGeckoCoinDetails]:
@@ -423,14 +435,17 @@ class DataFetchingService:
             Dictionary with processed project data
         """
         # Start with base project data
+        logger.debug(f"Transforming market data for {market.id}")
         project_data = market.to_automated_project_dict()
         
         # Add category from details if available
         if coin_details:
             project_data['category'] = coin_details.get_primary_category()
+            logger.debug(f"Category set for {market.id}: {project_data['category']}")
         
         # Calculate automated scores
         scores = self.scoring_engine.calculate_all_automated_scores(market, coin_details)
+        logger.debug(f"Scores calculated for {market.id}: {scores}")
         
         # Validate scores
         if not ScoringValidator.validate_scoring_results(scores):
@@ -443,6 +458,7 @@ class DataFetchingService:
         project_data['last_updated'] = datetime.utcnow()
         project_data['created_at'] = datetime.utcnow()
         
+        logger.info(f"Project data finalized for {market.id}")
         return project_data
     
     def _create_fetch_metadata(

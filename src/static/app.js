@@ -20,6 +20,10 @@ class OmegaApp {
         this.currentCSVProjectId = null;
         this.csvChart = null; // Chart.js instance for CSV visualization
         this.selectedProjects = new Set(); // Track selected projects for bulk operations
+
+        // Background Task Log Panel Integration
+        this.logPollInterval = null;
+        this.lastLogTimestamp = null;
         
         // API Base URL (adjust for your environment)
         this.apiBaseUrl = window.location.origin;
@@ -35,6 +39,7 @@ class OmegaApp {
         this.updateProjectCount();
         this.setupTabSwitching();
         this.loadAutomatedProjects();
+        this.initializeLogPanel();
     }
 
     // ===== TAB SWITCHING =====
@@ -222,16 +227,81 @@ class OmegaApp {
         spinner.style.display = 'inline-block';
 
         try {
-            await this.apiCall('/api/v2/fetch-projects', 'POST');
-            await this.loadAutomatedProjects();
-            this.showSuccess('Automated projects refreshed successfully!');
+            const result = await this.apiCall('/api/v2/tasks/fetch-projects', 'POST', {
+                save_to_database: true,
+                priority: 5
+            });
+
+            if (result.task_id) {
+                this.showSuccess('Project fetch started in the background. The list will update automatically when complete.');
+                // Poll for completion and then refresh
+                this.pollTaskStatus(result.task_id);
+            } else {
+                this.showError('Failed to start background refresh task.');
+                refreshButton.disabled = false;
+                spinner.style.display = 'none';
+            }
+            
         } catch (error) {
-            console.error('Failed to refresh automated projects:', error);
-            this.showError('Failed to refresh automated projects. Please try again.');
-        } finally {
+            console.error('Failed to trigger refresh task:', error);
+            this.showError('Failed to trigger refresh task. Please try again.');
             refreshButton.disabled = false;
             spinner.style.display = 'none';
         }
+    }
+
+    // === Task Status Display Integration ===
+    async pollTaskStatus(taskId) {
+        const taskStatusElement = document.getElementById('taskStatusDisplay');
+        const refreshButton = document.getElementById('refreshAutomatedProjects');
+        const spinner = document.getElementById('refreshSpinner');
+        const logOutput = document.getElementById('logOutput');
+        const interval = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/v2/tasks/status?task_id=${taskId}`);
+                const statusResult = await response.json();
+                const task = statusResult.task_status;
+                if (task && (task.status === 'SUCCESS' || task.status === 'COMPLETED')) {
+                    if (taskStatusElement) {
+                        taskStatusElement.textContent = `Task ${taskId} completed successfully.`;
+                    }
+                    if (logOutput) {
+                        const successMsg = `[${new Date().toISOString()}] INFO: Task ${taskId} completed successfully.\n`;
+                        logOutput.textContent += successMsg;
+                        logOutput.scrollTop = logOutput.scrollHeight;
+                    }
+                    refreshButton.disabled = false;
+                    spinner.style.display = 'none';
+                    clearInterval(interval);
+                    // FIX #1: Refresh the project list on successful completion.
+                    await this.loadAutomatedProjects();
+                } else if (task && task.status === 'FAILURE') {
+                    if (taskStatusElement) {
+                        taskStatusElement.textContent = `Task ${taskId} failed. Reason: ${task.result || 'Unknown'}`;
+                    }
+                    if (logOutput) {
+                        const errorMsg = `[${new Date().toISOString()}] ERROR: Task ${taskId} failed. Reason: ${task.result || 'Unknown'}\n`;
+                        logOutput.textContent += errorMsg;
+                        logOutput.scrollTop = logOutput.scrollHeight;
+                    }
+                    refreshButton.disabled = false;
+                    spinner.style.display = 'none';
+                    clearInterval(interval);
+                } else if (task && task.status === 'PROGRESS') {
+                    const progressMsg = `Progress: ${task.meta?.current || 0}/${task.meta?.total || '??'} - ${task.meta?.status || 'Processing...'}`;
+                    if (taskStatusElement) {
+                        taskStatusElement.textContent = progressMsg;
+                    }
+                }
+            } catch (error) {
+                if (taskStatusElement) {
+                    taskStatusElement.textContent = `Error polling task status: ${error.message}`;
+                }
+                refreshButton.disabled = false;
+                spinner.style.display = 'none';
+                clearInterval(interval);
+            }
+        }, 5000);
     }
 
     async analyzeCSVData(projectId, csvText) {
@@ -1146,107 +1216,64 @@ class OmegaApp {
             this.showError(`Completed with ${completed} successful and ${failed} failed analyses.`);
         }
     }
-}
 
-// ===== GLOBAL FUNCTIONS FOR HTML ONCLICK HANDLERS =====
+    // === Background Task Log Panel Integration ===
+    async fetchAndDisplayLogs() {
+        const logOutput = document.getElementById('logOutput');
+        const autoScrollCheckbox = document.getElementById('autoScrollLogsCheckbox');
+        const isAutoScroll = autoScrollCheckbox && autoScrollCheckbox.checked;
 
-function toggleProjectSelection(projectId) {
-    window.app.toggleProjectSelection(projectId);
-}
+        try {
+            const response = await fetch('/api/v2/logs/background-tasks?since=' + (this.lastLogTimestamp ? encodeURIComponent(this.lastLogTimestamp) : ''));
+            if (!response.ok) {
+                if (response.status === 404) return;
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const logsData = await response.json();
+            const logs = logsData.logs || [];
 
-function openCSVModal(projectId, projectName) {
-    const modal = document.getElementById('csvModal');
-    const projectNameSpan = document.getElementById('csvModalProjectName');
-    const csvInput = document.getElementById('csvInput');
-    const resultsDiv = document.getElementById('analysisResults');
-    const chartContainer = document.getElementById('chartContainer');
+            if (logs.length > 0) {
+                let shouldScroll = false;
+                if (isAutoScroll) {
+                    const isScrolledToBottom = logOutput.scrollHeight - logOutput.clientHeight <= logOutput.scrollTop + 1;
+                    shouldScroll = isScrolledToBottom;
+                }
 
-    projectNameSpan.textContent = projectName;
-    csvInput.value = '';
-    resultsDiv.style.display = 'none';
-    
-    // Hide chart container and clean up any existing chart
-    chartContainer.style.display = 'none';
-    if (window.app.csvChart) {
-        window.app.csvChart.destroy();
-        window.app.csvChart = null;
-    }
-    
-    window.app.currentCSVProjectId = projectId;
-    modal.classList.add('active');
-    
-    // Setup modal if not already done
-    if (!window.csvModalSetup) {
-        window.app.setupCSVModal();
-        window.csvModalSetup = true;
-    }
-}
+                logs.forEach(logEntry => {
+                    const formattedEntry = `[${logEntry.timestamp}] ${logEntry.level}: ${logEntry.message}\n`;
+                    const entryElement = document.createElement('div');
+                    entryElement.className = 'log-entry';
+                    entryElement.textContent = formattedEntry;
+                    logOutput.appendChild(entryElement);
+                    this.lastLogTimestamp = logEntry.timestamp;
+                });
 
-function closeCSVModal() {
-    const modal = document.getElementById('csvModal');
-    const chartContainer = document.getElementById('chartContainer');
-    
-    // Hide chart container and destroy chart
-    chartContainer.style.display = 'none';
-    if (window.app.csvChart) {
-        window.app.csvChart.destroy();
-        window.app.csvChart = null;
-    }
-    
-    modal.classList.remove('active');
-    window.app.currentCSVProjectId = null;
-}
-
-async function analyzeCSV() {
-    const csvInput = document.getElementById('csvInput');
-    const csvText = csvInput.value.trim();
-    
-    if (!csvText) {
-        window.app.showError('Please paste CSV data before analyzing.');
-        return;
+                if (isAutoScroll && shouldScroll) {
+                    logOutput.scrollTop = logOutput.scrollHeight;
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching logs:", error);
+        }
     }
 
-    if (!window.app.currentCSVProjectId) {
-        window.app.showError('No project selected for analysis.');
-        return;
+    initializeLogPanel() {
+        const clearLogsButton = document.getElementById('clearLogsButton');
+        const logOutput = document.getElementById('logOutput');
+        const autoScrollCheckbox = document.getElementById('autoScrollLogsCheckbox');
+
+        if (clearLogsButton) {
+            clearLogsButton.addEventListener('click', () => {
+                logOutput.textContent = '';
+                this.lastLogTimestamp = null;
+                this.showSuccess('Logs cleared.');
+            });
+        }
+
+        this.fetchAndDisplayLogs();
+
+        this.logPollInterval = setInterval(() => {
+            this.fetchAndDisplayLogs();
+        }, 5000);
     }
-
-    await window.app.handleCSVAnalysis(window.app.currentCSVProjectId, csvText);
 }
-
-function viewAutomatedProjectDetails(projectId) {
-    // Find the project
-    const project = window.app.automatedProjects.find(p => p.id === projectId);
-    if (!project) {
-        window.app.showError('Project not found.');
-        return;
-    }
-
-    // Create a simple details display (could be enhanced with a modal)
-    const details = `
-Project: ${project.name}
-Ticker: ${project.ticker || 'N/A'}
-Category: ${project.category || 'Other'}
-Market Cap: ${window.app.formatMarketCap(project.market_cap)}
-
-Narrative Score: ${project.narrative_score}
-- Sector Strength: ${project.sector_strength}
-- Value Proposition: ${project.value_proposition}
-- Backing & Team: ${project.backing_team}
-
-Tokenomics Score: ${project.tokenomics_score}
-- Valuation Potential: ${project.valuation_potential}
-- Token Utility: ${project.token_utility}
-- Supply Risk: ${project.supply_risk}
-
-Data Score: ${project.has_data_score ? project.data_score : 'Awaiting Data'}
-Omega Score: ${project.has_data_score ? project.omega_score : 'Awaiting Data'}
-    `;
-
-    alert(details); // Simple implementation - could be enhanced with a proper modal
-}
-
-// Initialize the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new OmegaApp();
-});

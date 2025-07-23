@@ -1106,6 +1106,12 @@
                         </div>
                     </div>
 
+                    <!-- Log Viewer -->
+                    <div id="logViewerContainer" style="display: none; margin-bottom: 20px;">
+                        <label><strong>Refresh Log:</strong></label>
+                        <div id="logViewer" style="background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 10px; height: 150px; overflow-y: scroll; font-family: monospace; font-size: 12px;"></div>
+                    </div>
+
                     <!-- Automated Project List -->
                     <div id="automatedProjectList" class="project-grid">
                         <div class="empty-state">
@@ -1185,3 +1191,50 @@ time,close,Volume Delta (Close)
     <script src="app.js"></script>
 </body>
 </html>
+
+<!-- === Background Task Log Panel for Automated Tab === -->
+<!-- Place this inside the Automated Tab Content after project list and controls -->
+<div class="log-panel-container">
+    <h3>Background Task Logs</h3>
+    <div id="taskStatusDisplay" class="task-status-display" style="margin-bottom: 10px; font-weight: bold; color: var(--primary-color);">
+        <!-- Task status will be displayed here -->
+    </div>
+    <div class="log-controls">
+        <button id="clearLogsButton" class="btn btn-secondary btn-small">Clear Logs</button>
+        <label>
+            <input type="checkbox" id="autoScrollLogsCheckbox" checked> Auto-Scroll
+        </label>
+    </div>
+    <div id="logOutput" class="log-output"></div>
+</div>
+<style>
+.log-panel-container {
+    margin-top: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    background-color: #f8f9fa;
+}
+.log-controls {
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.log-output {
+    height: 200px;
+    overflow-y: auto;
+    background-color: #000;
+    color: #00FF00;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    border: 1px solid #bdbdbd;
+    border-radius: 2px;
+}
+.log-entry {
+    margin: 0;
+    padding: 2px 0;
+}
+</style>
