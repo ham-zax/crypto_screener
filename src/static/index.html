@@ -415,6 +415,268 @@
             margin-bottom: 16px;
         }
 
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 16px 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-600);
+            border-right: 1px solid var(--gray-200);
+        }
+
+        .nav-tab:last-child {
+            border-right: none;
+        }
+
+        .nav-tab:hover {
+            background: var(--gray-100);
+            color: var(--gray-800);
+        }
+
+        .nav-tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .nav-tab.active:hover {
+            background: #1d4ed8;
+        }
+
+        .tab-icon {
+            font-size: 18px;
+        }
+
+        /* Tab Content Sections */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Automated Projects Specific Styles */
+        .automated-projects-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .refresh-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .last-updated {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        .project-source-indicator {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .source-manual {
+            background: #e0f2fe;
+            color: #0277bd;
+        }
+
+        .source-automated {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .awaiting-data {
+            color: var(--warning-color);
+            font-style: italic;
+        }
+
+        .omega-score.awaiting .omega-score-value {
+            color: var(--warning-color);
+        }
+
+        /* Selection and Bulk Operations */
+        .project-card.selected {
+            border: 2px solid var(--primary-color);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .project-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* CSV Upload Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .modal-header h3 {
+            margin-bottom: 12px;
+            color: var(--gray-900);
+        }
+
+        .requirements {
+            background: var(--gray-100);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .requirements p {
+            margin: 0;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .csv-input-area {
+            margin-bottom: 20px;
+        }
+
+        .csv-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            border: 2px dashed var(--gray-300);
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+        }
+
+        .csv-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            border-style: solid;
+        }
+
+        .csv-textarea.drag-over {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .analysis-results {
+            background: var(--gray-100);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .score-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .analysis-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .analysis-detail {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .modal-footer {
+            padding: 24px;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -432,8 +694,119 @@
             .score-breakdown {
                 grid-template-columns: 1fr;
             }
+
+            .nav-tab {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .tab-icon {
+                font-size: 16px;
+            }
+
+            .modal {
+                width: 95%;
+                margin: 10px;
+            }
+
+            .analysis-details {
+                grid-template-columns: 1fr;
+            }
+
+            /* V2 Responsive Enhancements */
+            .automated-projects-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .refresh-controls {
+                width: 100%;
+            }
+
+            .refresh-controls > div {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .project-header > div:first-child {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .project-actions {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .btn-small {
+                flex: 1;
+                min-width: 120px;
+            }
+
+            /* Chart responsive */
+            #chartContainer {
+                margin-top: 15px;
+            }
+
+            #chartContainer > div {
+                height: 250px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .header .subtitle {
+                font-size: 14px;
+            }
+
+            .nav-tab {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .nav-tab .tab-text {
+                display: none;
+            }
+
+            .project-name {
+                font-size: 16px;
+            }
+
+            .omega-score-value {
+                font-size: 20px;
+            }
+
+            .btn-small {
+                padding: 8px 12px;
+                font-size: 12px;
+                min-width: 100px;
+            }
+
+            .form-group input,
+            .form-group select {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            .modal {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+                margin: 0;
+            }
+
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding: 16px;
+            }
         }
     </style>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -446,147 +819,242 @@
             ⚠️ <strong>Data Storage Notice:</strong> All project data is stored locally in your browser. Data will be lost if you clear your browser cache or switch devices.
         </div>
 
-        <div class="main-content">
-            <!-- Add Project Wizard -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>Add New Project</h2>
-                    <p>Follow the three-step Omega Protocol evaluation</p>
+        <!-- V2 Navigation Tabs -->
+        <nav class="nav-tabs" role="tablist" aria-label="Project type navigation">
+            <button class="nav-tab active" data-tab="manual" role="tab" aria-selected="true" aria-controls="manualTab" id="manual-tab">
+                <span class="tab-icon" aria-hidden="true">🧙‍♂️</span>
+                <span class="tab-text">Manual Projects</span>
+            </button>
+            <button class="nav-tab" data-tab="automated" role="tab" aria-selected="false" aria-controls="automatedTab" id="automated-tab">
+                <span class="tab-icon" aria-hidden="true">🤖</span>
+                <span class="tab-text">Automated Projects</span>
+            </button>
+        </nav>
+
+        <!-- Tab Content Sections -->
+        <div class="tab-content active" id="manualTab" role="tabpanel" aria-labelledby="manual-tab">
+            <div class="main-content">
+                <!-- Add Project Wizard -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Add New Project</h2>
+                        <p>Follow the three-step Omega Protocol evaluation</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="wizard-container">
+                            <!-- Step Indicator -->
+                            <div class="step-indicator">
+                                <div class="progress-line" id="progressLine"></div>
+                                <div class="step active" data-step="1">
+                                    <div class="step-number">1</div>
+                                    <div class="step-label">Narrative</div>
+                                </div>
+                                <div class="step" data-step="2">
+                                    <div class="step-number">2</div>
+                                    <div class="step-label">Tokenomics</div>
+                                </div>
+                                <div class="step" data-step="3">
+                                    <div class="step-number">3</div>
+                                    <div class="step-label">Data</div>
+                                </div>
+                            </div>
+
+                            <div class="error-message" id="errorMessage"></div>
+
+                            <form id="projectWizard">
+                                <!-- Step 1: Narrative -->
+                                <div class="wizard-step active" data-step="1">
+                                    <div class="form-group">
+                                        <label for="projectName">Project Name *</label>
+                                        <input type="text" id="projectName" name="name" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="projectTicker">Ticker Symbol</label>
+                                        <input type="text" id="projectTicker" name="ticker" placeholder="e.g., BTC, ETH">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="hotSector">Hot Sector *</label>
+                                        <select id="hotSector" name="hot_sector" required>
+                                            <option value="">Select a sector</option>
+                                            <option value="AI">AI (Artificial Intelligence)</option>
+                                            <option value="DePIN">DePIN (Decentralized Physical Infrastructure)</option>
+                                            <option value="RWA">RWA (Real-World Assets)</option>
+                                            <option value="GameFi">GameFi (Gaming Finance)</option>
+                                            <option value="DeFi">DeFi (Decentralized Finance)</option>
+                                            <option value="Infrastructure">Infrastructure</option>
+                                            <option value="L1">L1 (Layer 1)</option>
+                                            <option value="L2">L2 (Layer 2)</option>
+                                            <option value="Meme">Meme</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="sectorStrength">Sector Strength (1-10) *</label>
+                                        <input type="number" id="sectorStrength" name="sector_strength" min="1" max="10" required>
+                                        <div class="help-text">Rate the strength and capital-attracting power of this narrative</div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="valueProposition">Value Proposition (1-10) *</label>
+                                        <input type="number" id="valueProposition" name="value_proposition" min="1" max="10" required>
+                                        <div class="help-text">Rate the clarity, innovation, and compelling nature of the solution</div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="backingTeam">Backing & Team (1-10) *</label>
+                                        <input type="number" id="backingTeam" name="backing_team" min="1" max="10" required>
+                                        <div class="help-text">Rate the quality of VC support and team strength</div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 2: Tokenomics -->
+                                <div class="wizard-step" data-step="2">
+                                    <div class="form-group">
+                                        <label for="valuationPotential">Valuation Potential (1-10) *</label>
+                                        <input type="number" id="valuationPotential" name="valuation_potential" min="1" max="10" required>
+                                        <div class="help-text">Rate based on current FDV - lower valuations = higher scores</div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="tokenUtility">Token Utility (1-10) *</label>
+                                        <input type="number" id="tokenUtility" name="token_utility" min="1" max="10" required>
+                                        <div class="help-text">Rate how integral the token is to protocol function and value accrual</div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="supplyRisk">Supply Risk (1-10) *</label>
+                                        <input type="number" id="supplyRisk" name="supply_risk" min="1" max="10" required>
+                                        <div class="help-text">Rate the risk from future token unlocks and vesting schedules</div>
+                                    </div>
+                                </div>
+
+                                <!-- Step 3: Data -->
+                                <div class="wizard-step" data-step="3">
+                                    <div class="form-group">
+                                        <label for="accumulationSignal">Accumulation Signal (1-10) *</label>
+                                        <input type="number" id="accumulationSignal" name="accumulation_signal" min="1" max="10" required>
+                                        <div class="help-text">Rate the clarity of bullish divergence between price and Spot CVD</div>
+                                    </div>
+                                </div>
+
+                                <div class="wizard-actions">
+                                    <button type="button" class="btn btn-secondary" id="prevButton" disabled>
+                                        ← Previous
+                                    </button>
+                                    <button type="button" class="btn btn-primary" id="nextButton">
+                                        Next →
+                                    </button>
+                                    <button type="submit" class="btn btn-primary" id="submitButton" style="display: none;">
+                                        Add Project
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="wizard-container">
-                        <!-- Step Indicator -->
-                        <div class="step-indicator">
-                            <div class="progress-line" id="progressLine"></div>
-                            <div class="step active" data-step="1">
-                                <div class="step-number">1</div>
-                                <div class="step-label">Narrative</div>
+
+                <!-- Manual Watchlist -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="watchlist-header">
+                            <div>
+                                <h2>My Watchlist</h2>
+                                <p>Projects screened using the Omega Protocol</p>
                             </div>
-                            <div class="step" data-step="2">
-                                <div class="step-number">2</div>
-                                <div class="step-label">Tokenomics</div>
+                            <div id="projectCount" class="project-count">0 projects</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filters -->
+                        <div class="filters">
+                            <div class="form-group">
+                                <label for="filterSector">Filter by Sector</label>
+                                <select id="filterSector">
+                                    <option value="">All Sectors</option>
+                                    <option value="AI">AI</option>
+                                    <option value="DePIN">DePIN</option>
+                                    <option value="RWA">RWA</option>
+                                    <option value="GameFi">GameFi</option>
+                                    <option value="DeFi">DeFi</option>
+                                    <option value="Infrastructure">Infrastructure</option>
+                                    <option value="L1">L1</option>
+                                    <option value="L2">L2</option>
+                                    <option value="Meme">Meme</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
-                            <div class="step" data-step="3">
-                                <div class="step-number">3</div>
-                                <div class="step-label">Data</div>
+                            <div class="form-group">
+                                <label for="filterOmegaMin">Min Omega Score</label>
+                                <input type="number" id="filterOmegaMin" min="1" max="10" step="0.1" placeholder="e.g., 8.0">
+                            </div>
+                            <div class="form-group">
+                                <label for="filterOmegaMax">Max Omega Score</label>
+                                <input type="number" id="filterOmegaMax" min="1" max="10" step="0.1" placeholder="e.g., 10.0">
+                            </div>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-secondary" id="clearFilters">Clear Filters</button>
                             </div>
                         </div>
 
-                        <div class="error-message" id="errorMessage"></div>
-
-                        <form id="projectWizard">
-                            <!-- Step 1: Narrative -->
-                            <div class="wizard-step active" data-step="1">
-                                <div class="form-group">
-                                    <label for="projectName">Project Name *</label>
-                                    <input type="text" id="projectName" name="name" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="projectTicker">Ticker Symbol</label>
-                                    <input type="text" id="projectTicker" name="ticker" placeholder="e.g., BTC, ETH">
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="hotSector">Hot Sector *</label>
-                                    <select id="hotSector" name="hot_sector" required>
-                                        <option value="">Select a sector</option>
-                                        <option value="AI">AI (Artificial Intelligence)</option>
-                                        <option value="DePIN">DePIN (Decentralized Physical Infrastructure)</option>
-                                        <option value="RWA">RWA (Real-World Assets)</option>
-                                        <option value="GameFi">GameFi (Gaming Finance)</option>
-                                        <option value="DeFi">DeFi (Decentralized Finance)</option>
-                                        <option value="Infrastructure">Infrastructure</option>
-                                        <option value="L1">L1 (Layer 1)</option>
-                                        <option value="L2">L2 (Layer 2)</option>
-                                        <option value="Meme">Meme</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="sectorStrength">Sector Strength (1-10) *</label>
-                                    <input type="number" id="sectorStrength" name="sector_strength" min="1" max="10" required>
-                                    <div class="help-text">Rate the strength and capital-attracting power of this narrative</div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="valueProposition">Value Proposition (1-10) *</label>
-                                    <input type="number" id="valueProposition" name="value_proposition" min="1" max="10" required>
-                                    <div class="help-text">Rate the clarity, innovation, and compelling nature of the solution</div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="backingTeam">Backing & Team (1-10) *</label>
-                                    <input type="number" id="backingTeam" name="backing_team" min="1" max="10" required>
-                                    <div class="help-text">Rate the quality of VC support and team strength</div>
-                                </div>
+                        <!-- Project List -->
+                        <div id="projectList" class="project-grid">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📊</div>
+                                <h3>No projects yet</h3>
+                                <p>Add your first cryptocurrency project using the wizard above</p>
                             </div>
-
-                            <!-- Step 2: Tokenomics -->
-                            <div class="wizard-step" data-step="2">
-                                <div class="form-group">
-                                    <label for="valuationPotential">Valuation Potential (1-10) *</label>
-                                    <input type="number" id="valuationPotential" name="valuation_potential" min="1" max="10" required>
-                                    <div class="help-text">Rate based on current FDV - lower valuations = higher scores</div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="tokenUtility">Token Utility (1-10) *</label>
-                                    <input type="number" id="tokenUtility" name="token_utility" min="1" max="10" required>
-                                    <div class="help-text">Rate how integral the token is to protocol function and value accrual</div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="supplyRisk">Supply Risk (1-10) *</label>
-                                    <input type="number" id="supplyRisk" name="supply_risk" min="1" max="10" required>
-                                    <div class="help-text">Rate the risk from future token unlocks and vesting schedules</div>
-                                </div>
-                            </div>
-
-                            <!-- Step 3: Data -->
-                            <div class="wizard-step" data-step="3">
-                                <div class="form-group">
-                                    <label for="accumulationSignal">Accumulation Signal (1-10) *</label>
-                                    <input type="number" id="accumulationSignal" name="accumulation_signal" min="1" max="10" required>
-                                    <div class="help-text">Rate the clarity of bullish divergence between price and Spot CVD</div>
-                                </div>
-                            </div>
-
-                            <div class="wizard-actions">
-                                <button type="button" class="btn btn-secondary" id="prevButton" disabled>
-                                    ← Previous
-                                </button>
-                                <button type="button" class="btn btn-primary" id="nextButton">
-                                    Next →
-                                </button>
-                                <button type="submit" class="btn btn-primary" id="submitButton" style="display: none;">
-                                    Add Project
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Watchlist -->
+        <!-- Automated Projects Tab -->
+        <div class="tab-content" id="automatedTab" role="tabpanel" aria-labelledby="automated-tab">
             <div class="card">
                 <div class="card-header">
-                    <div class="watchlist-header">
+                    <div class="automated-projects-header">
                         <div>
-                            <h2>My Watchlist</h2>
-                            <p>Projects screened using the Omega Protocol</p>
+                            <h2>Automated Universe</h2>
+                            <p>Cryptocurrency projects automatically scored from market data</p>
                         </div>
-                        <div id="projectCount" class="project-count">0 projects</div>
+                        <div class="refresh-controls">
+                            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                                <span class="last-updated" id="lastUpdated">Last updated: --</span>
+                                <button class="btn btn-secondary btn-small" id="refreshAutomatedProjects">
+                                    <span class="loading-spinner" id="refreshSpinner" style="display: none;"></span>
+                                    Refresh
+                                </button>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--gray-600);">
+                                <span id="selectionCount">0 selected</span>
+                                <button class="btn btn-secondary btn-small" id="bulkAnalyzeBtn" style="display: none;">
+                                    📊 Bulk Analyze
+                                </button>
+                                <button class="btn btn-secondary btn-small" id="selectAllBtn">
+                                    Select All
+                                </button>
+                                <button class="btn btn-secondary btn-small" id="clearSelectionBtn" style="display: none;">
+                                    Clear Selection
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- Filters -->
+                    <!-- Automated Project Filters -->
                     <div class="filters">
                         <div class="form-group">
-                            <label for="filterSector">Filter by Sector</label>
-                            <select id="filterSector">
-                                <option value="">All Sectors</option>
+                            <label for="automatedSearchInput">Search Projects</label>
+                            <input type="text" id="automatedSearchInput" placeholder="Search by name or ticker..." style="width: 100%; padding: 8px; border: 1px solid var(--gray-300); border-radius: 4px;">
+                        </div>
+                        <div class="form-group">
+                            <label for="automatedFilterSector">Filter by Category</label>
+                            <select id="automatedFilterSector">
+                                <option value="">All Categories</option>
                                 <option value="AI">AI</option>
                                 <option value="DePIN">DePIN</option>
                                 <option value="RWA">RWA</option>
@@ -600,26 +1068,115 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="filterOmegaMin">Min Omega Score</label>
-                            <input type="number" id="filterOmegaMin" min="1" max="10" step="0.1" placeholder="e.g., 8.0">
+                            <label for="automatedFilterMarketCap">Min Market Cap</label>
+                            <select id="automatedFilterMarketCap">
+                                <option value="">Any Market Cap</option>
+                                <option value="20000000">$20M+</option>
+                                <option value="50000000">$50M+</option>
+                                <option value="100000000">$100M+</option>
+                                <option value="500000000">$500M+</option>
+                                <option value="1000000000">$1B+</option>
+                            </select>
                         </div>
                         <div class="form-group">
-                            <label for="filterOmegaMax">Max Omega Score</label>
-                            <input type="number" id="filterOmegaMax" min="1" max="10" step="0.1" placeholder="e.g., 10.0">
+                            <label for="automatedFilterDataStatus">Data Status</label>
+                            <select id="automatedFilterDataStatus">
+                                <option value="">All Projects</option>
+                                <option value="awaiting">Awaiting Data</option>
+                                <option value="complete">Complete Analysis</option>
+                            </select>
                         </div>
                         <div class="form-group">
-                            <button type="button" class="btn btn-secondary" id="clearFilters">Clear Filters</button>
+                            <label for="automatedFilterOmegaMin">Min Omega Score</label>
+                            <input type="number" id="automatedFilterOmegaMin" min="1" max="10" step="0.1" placeholder="e.g., 6.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="automatedSortBy">Sort By</label>
+                            <select id="automatedSortBy">
+                                <option value="omega_desc">Omega Score (High to Low)</option>
+                                <option value="omega_asc">Omega Score (Low to High)</option>
+                                <option value="market_cap_desc">Market Cap (High to Low)</option>
+                                <option value="market_cap_asc">Market Cap (Low to High)</option>
+                                <option value="name_asc">Name (A to Z)</option>
+                                <option value="data_status">Data Status (Awaiting First)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" class="btn btn-secondary" id="clearAutomatedFilters">Clear Filters</button>
                         </div>
                     </div>
 
-                    <!-- Project List -->
-                    <div id="projectList" class="project-grid">
+                    <!-- Automated Project List -->
+                    <div id="automatedProjectList" class="project-grid">
                         <div class="empty-state">
-                            <div class="empty-state-icon">📊</div>
-                            <h3>No projects yet</h3>
-                            <p>Add your first cryptocurrency project using the wizard above</p>
+                            <div class="empty-state-icon">🤖</div>
+                            <h3>Loading automated projects...</h3>
+                            <p>Fetching cryptocurrency data from market APIs</p>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSV Upload Modal -->
+        <div class="modal-overlay" id="csvModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Analyze Chart Data for <span id="csvModalProjectName">--</span></h3>
+                    <div class="requirements">
+                        <p><strong>Required columns:</strong> time, close, Volume Delta (Close)</p>
+                        <p><strong>Minimum data:</strong> 90 periods (e.g., 90 days of daily data)</p>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="csv-input-area">
+                        <textarea class="csv-textarea" id="csvInput" placeholder="Paste your TradingView CSV data here...
+
+Example format:
+time,close,Volume Delta (Close)
+2024-01-01,45000,1500000
+2024-01-02,45200,2100000
+..."></textarea>
+                    </div>
+                    <div class="analysis-results" id="analysisResults" style="display: none;">
+                        <div class="score-result">
+                            <span class="label">Data Score:</span>
+                            <span class="score" id="dataScore">--</span>
+                        </div>
+                        <div class="analysis-details">
+                            <div class="analysis-detail">
+                                <div class="detail-label">Price Trend</div>
+                                <div class="detail-value" id="priceTrend">--</div>
+                            </div>
+                            <div class="analysis-detail">
+                                <div class="detail-label">CVD Trend</div>
+                                <div class="detail-value" id="cvdTrend">--</div>
+                            </div>
+                            <div class="analysis-detail">
+                                <div class="detail-label">Divergence</div>
+                                <div class="detail-value" id="divergenceAnalysis">--</div>
+                            </div>
+                            <div class="analysis-detail">
+                                <div class="detail-label">Data Points</div>
+                                <div class="detail-value" id="dataPoints">--</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart Visualization -->
+                    <div id="chartContainer" style="margin-top: 20px; display: none;">
+                        <h4 style="margin-bottom: 10px; color: var(--gray-800);">Price vs CVD Analysis</h4>
+                        <div style="position: relative; height: 300px; background: white; border-radius: 8px; padding: 10px;">
+                            <canvas id="csvChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeCSVModal()">Cancel</button>
+                    <button class="btn btn-primary" id="analyzeCSVButton" onclick="analyzeCSV()">
+                        <span class="loading-spinner" id="analyzeSpinner" style="display: none;"></span>
+                        Analyze Data
+                    </button>
                 </div>
             </div>
         </div>
