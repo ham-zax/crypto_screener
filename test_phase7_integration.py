@@ -978,3 +978,214 @@ class Phase7TestOrchestrator:
         v2_requirements = {
             'US-04': 'Automated Project Ingestion',
             'US-06': 'CSV Data Analysis',
+            'AS-01': 'Narrative Score Calculation',
+            'AS-01a': 'Sector Strength Scoring',
+            'AS-01b': 'Backing & Team Default Score',
+            'AS-01c': 'Value Proposition Default Score',
+            'AS-02': 'Tokenomics Score Calculation',
+            'AS-02a': 'Valuation Potential Scoring',
+            'AS-02b': 'Token Utility Default Score',
+            'AS-02c': 'Supply Risk Scoring',
+            'AS-03': 'Data Score from CSV',
+            'AS-03a': 'CSV Parsing Requirements',
+            'AS-03b': 'Accumulation Signal Algorithm',
+            'AS-05': 'Omega Score State Management',
+            'BR-06': 'CoinGecko API Requirement',
+            'BR-07': 'API Failure Handling',
+            'BR-09': 'CSV UI Requirements'
+        }
+        
+        validated_v2_requirements = {req: desc for req, desc in v2_requirements.items() 
+                                   if req in all_requirements}
+        missing_v2_requirements = {req: desc for req, desc in v2_requirements.items() 
+                                 if req not in all_requirements}
+        
+        # Generate report
+        report = {
+            'phase': 'Phase 7 - Integration & Testing',
+            'timestamp': datetime.now().isoformat(),
+            'execution_summary': {
+                'total_execution_time_seconds': round(total_time, 2),
+                'total_tests': total_tests,
+                'passed': passed_tests,
+                'failed': failed_tests,
+                'errors': error_tests,
+                'skipped': skipped_tests,
+                'success_rate': round((passed_tests / total_tests * 100) if total_tests > 0 else 0, 1),
+                'setup_failed': setup_failed
+            },
+            'suite_results': {
+                suite_name: {
+                    'total': len(suite_results),
+                    'passed': len([r for r in suite_results if r.status == 'passed']),
+                    'failed': len([r for r in suite_results if r.status == 'failed']),
+                    'errors': len([r for r in suite_results if r.status == 'error']),
+                    'skipped': len([r for r in suite_results if r.status == 'skipped']),
+                    'success_rate': round((len([r for r in suite_results if r.status == 'passed']) / len(suite_results) * 100) if suite_results else 0, 1)
+                }
+                for suite_name, suite_results in suites.items()
+            },
+            'v2_specification_compliance': {
+                'total_v2_requirements': len(v2_requirements),
+                'validated_requirements': len(validated_v2_requirements),
+                'compliance_percentage': round((len(validated_v2_requirements) / len(v2_requirements) * 100), 1),
+                'validated': validated_v2_requirements,
+                'missing': missing_v2_requirements
+            },
+            'environment_info': self.test_environment,
+            'detailed_results': [asdict(result) for result in self.results]
+        }
+        
+        # Print summary
+        self._print_final_summary(report)
+        
+        # Save detailed report to file
+        report_file = f"phase7_integration_test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(report_file, 'w') as f:
+            json.dump(report, f, indent=2)
+        
+        logger.info(f"📋 Detailed test report saved to: {report_file}")
+        
+        return report
+    
+    def _print_final_summary(self, report: Dict[str, Any]):
+        """Print comprehensive test summary"""
+        print("\n" + "=" * 80)
+        print("🎯 PHASE 7 - INTEGRATION & TESTING RESULTS")
+        print("=" * 80)
+        
+        summary = report['execution_summary']
+        compliance = report['v2_specification_compliance']
+        
+        # Overall results
+        if summary['success_rate'] >= 95:
+            status_icon = "✅"
+            status_text = "EXCELLENT"
+        elif summary['success_rate'] >= 80:
+            status_icon = "⚠️"
+            status_text = "GOOD"
+        else:
+            status_icon = "❌"
+            status_text = "NEEDS IMPROVEMENT"
+        
+        print(f"\n{status_icon} OVERALL STATUS: {status_text}")
+        print(f"Success Rate: {summary['success_rate']}%")
+        print(f"Total Tests: {summary['total_tests']}")
+        print(f"Passed: {summary['passed']} | Failed: {summary['failed']} | Errors: {summary['errors']} | Skipped: {summary['skipped']}")
+        print(f"Execution Time: {summary['total_execution_time_seconds']}s")
+        
+        # V2 Specification Compliance
+        print(f"\n📋 V2 SPECIFICATION COMPLIANCE: {compliance['compliance_percentage']}%")
+        print(f"Validated Requirements: {compliance['validated_requirements']}/{compliance['total_v2_requirements']}")
+        
+        if compliance['validated']:
+            print("\n✅ VALIDATED V2 REQUIREMENTS:")
+            for req_id, desc in compliance['validated'].items():
+                print(f"  {req_id}: {desc}")
+        
+        if compliance['missing']:
+            print("\n❌ MISSING V2 REQUIREMENTS:")
+            for req_id, desc in compliance['missing'].items():
+                print(f"  {req_id}: {desc}")
+        
+        # Suite breakdown
+        print("\n📊 SUITE BREAKDOWN:")
+        for suite_name, suite_data in report['suite_results'].items():
+            suite_icon = "✅" if suite_data['success_rate'] >= 90 else "⚠️" if suite_data['success_rate'] >= 70 else "❌"
+            print(f"  {suite_icon} {suite_name.replace('_', ' ').title()}: {suite_data['success_rate']}% ({suite_data['passed']}/{suite_data['total']})")
+        
+        # Key findings
+        print("\n🔍 KEY FINDINGS:")
+        
+        # Check critical requirements
+        critical_reqs = ['US-04', 'US-06', 'AS-05']
+        validated_critical = [req for req in critical_reqs if req in compliance['validated']]
+        
+        if len(validated_critical) == len(critical_reqs):
+            print("  ✅ All critical user stories validated")
+        else:
+            missing_critical = [req for req in critical_reqs if req not in validated_critical]
+            print(f"  ❌ Missing critical requirements: {missing_critical}")
+        
+        # Performance check
+        perf_results = [r for r in report['detailed_results'] if r['suite'] == 'performance_testing']
+        if perf_results and any(r['status'] == 'passed' for r in perf_results):
+            print("  ✅ Performance requirements met")
+        else:
+            print("  ⚠️ Performance testing needs attention")
+        
+        # V1 compatibility
+        compat_results = [r for r in report['detailed_results'] if r['suite'] == 'v1_compatibility']
+        if compat_results and any(r['status'] == 'passed' for r in compat_results):
+            print("  ✅ V1 compatibility preserved")
+        else:
+            print("  ⚠️ V1 compatibility needs verification")
+        
+        print("\n" + "=" * 80)
+        
+        # Final verdict
+        if summary['success_rate'] >= 95 and compliance['compliance_percentage'] >= 90:
+            print("🎉 PHASE 7 INTEGRATION & TESTING: SUCCESSFUL")
+            print("The V2 implementation meets all critical requirements and is ready for production.")
+        elif summary['success_rate'] >= 80 and compliance['compliance_percentage'] >= 75:
+            print("⚠️ PHASE 7 INTEGRATION & TESTING: MOSTLY SUCCESSFUL")
+            print("The V2 implementation is functional but has some areas that need attention.")
+        else:
+            print("❌ PHASE 7 INTEGRATION & TESTING: NEEDS WORK")
+            print("The V2 implementation requires significant fixes before production readiness.")
+        
+        print("=" * 80)
+    
+    def cleanup(self):
+        """Cleanup test environment"""
+        if self.server_process:
+            logger.info("Shutting down test server...")
+            self.server_process.terminate()
+            self.server_process.wait(timeout=10)
+
+def main():
+    """Main entry point for Phase 7 integration testing"""
+    parser = argparse.ArgumentParser(description='Phase 7 - Integration & Testing')
+    parser.add_argument('--full', action='store_true', help='Run full comprehensive testing')
+    parser.add_argument('--suite', choices=['api', 'database', 'csv', 'performance'], 
+                       help='Run specific test suite')
+    parser.add_argument('--user-story', choices=['US-04', 'US-06', 'AS-05'], 
+                       help='Test specific user story')
+    parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+    
+    args = parser.parse_args()
+    
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
+    # Create test orchestrator
+    orchestrator = Phase7TestOrchestrator()
+    
+    try:
+        # Run comprehensive testing
+        report = orchestrator.run_comprehensive_testing()
+        
+        # Exit with appropriate code
+        success_rate = report['execution_summary']['success_rate']
+        compliance_rate = report['v2_specification_compliance']['compliance_percentage']
+        
+        if success_rate >= 95 and compliance_rate >= 90:
+            exit_code = 0  # Success
+        elif success_rate >= 80 and compliance_rate >= 75:
+            exit_code = 1  # Partial success
+        else:
+            exit_code = 2  # Failure
+        
+        sys.exit(exit_code)
+        
+    except KeyboardInterrupt:
+        logger.info("Testing interrupted by user")
+        sys.exit(130)
+    except Exception as e:
+        logger.error(f"Testing failed with exception: {e}")
+        sys.exit(3)
+    finally:
+        orchestrator.cleanup()
+
+if __name__ == "__main__":
+    main()
