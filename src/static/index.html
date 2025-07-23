@@ -3,202 +3,628 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Project Screener</title>
+    <title>Project Omega - Crypto Screening Tool</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #16a34a;
+            --warning-color: #ea580c;
+            --danger-color: #dc2626;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
         }
-        .container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1, h2 {
-            color: #333;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-group input[type="text"],
-        .form-group textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+
+        * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
-        .form-group textarea {
-            resize: vertical;
-            min-height: 60px;
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--gray-100);
+            color: var(--gray-900);
+            line-height: 1.6;
         }
-        .btn {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: var(--gray-600);
             font-size: 16px;
         }
-        .btn:hover {
-            background-color: #0056b3;
+
+        .warning-banner {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            color: #92400e;
         }
-        .project-list {
-            margin-top: 20px;
-            border-top: 1px solid #eee;
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        @media (min-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .card-header h2 {
+            color: var(--gray-800);
+            margin-bottom: 5px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Wizard Styles */
+        .wizard-container {
+            position: relative;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .step-indicator::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--gray-200);
+            z-index: 1;
+        }
+
+        .step-indicator .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            height: 2px;
+            background: var(--primary-color);
+            z-index: 2;
+            transition: width 0.3s ease;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 3;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--gray-300);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--gray-600);
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .step.active .step-number {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .step.completed .step-number {
+            background: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .step-label {
+            font-size: 14px;
+            text-align: center;
+            color: var(--gray-600);
+        }
+
+        .step.active .step-label {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .wizard-step {
+            display: none;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-group input.error,
+        .form-group select.error {
+            border-color: var(--danger-color);
+        }
+
+        .form-group .help-text {
+            font-size: 14px;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
             padding-top: 20px;
+            border-top: 1px solid var(--gray-200);
         }
-        .project-item {
-            background-color: #f9f9f9;
-            border: 1px solid #eee;
-            padding: 10px;
-            margin-bottom: 10px;
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-800);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Watchlist Styles */
+        .watchlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: var(--gray-100);
+            border-radius: 8px;
+        }
+
+        .project-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .project-card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .project-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .project-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 5px;
+        }
+
+        .project-sector {
+            font-size: 14px;
+            padding: 4px 8px;
+            background: var(--primary-color);
+            color: white;
             border-radius: 4px;
+            display: inline-block;
         }
-        .project-item h3 {
-            margin-top: 0;
-            color: #007bff;
+
+        .omega-score {
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .omega-score-value {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .omega-score-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .score-excellent { color: var(--success-color); }
+        .score-good { color: #059669; }
+        .score-average { color: var(--warning-color); }
+        .score-poor { color: var(--danger-color); }
+
+        .score-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .score-item {
+            text-align: center;
+            padding: 12px;
+            background: var(--gray-100);
+            border-radius: 6px;
+        }
+
+        .score-item-value {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .score-item-label {
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        .project-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray-600);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters {
+                grid-template-columns: 1fr;
+            }
+            
+            .score-breakdown {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Crypto Project Screener</h1>
+        <div class="header">
+            <h1>Project Omega</h1>
+            <p class="subtitle">Systematic cryptocurrency screening using the Omega Protocol</p>
+        </div>
 
-        <h2>Add New Project</h2>
-        <form id="addProjectForm">
-            <div class="form-group">
-                <label for="name">Project Name:</label>
-                <input type="text" id="name" name="name" required>
-            </div>
-            <div class="form-group">
-                <label for="hot_sector">Hot Sector:</label>
-                <input type="text" id="hot_sector" name="hot_sector">
-            </div>
-            <div class="form-group">
-                <label for="value_proposition">Value Proposition:</label>
-                <textarea id="value_proposition" name="value_proposition"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="backing_team">Backing & Team:</label>
-                <textarea id="backing_team" name="backing_team"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="initial_float">Initial Float:</label>
-                <input type="text" id="initial_float" name="initial_float">
-            </div>
-            <div class="form-group">
-                <label for="real_utility">Real Utility:</label>
-                <textarea id="real_utility" name="real_utility"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="fair_launch_vesting">Fair Launch / Vesting:</label>
-                <textarea id="fair_launch_vesting" name="fair_launch_vesting"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="macro_accumulation_divergence">Macro Accumulation Divergence:</label>
-                <input type="text" id="macro_accumulation_divergence" name="macro_accumulation_divergence">
-            </div>
-            <div class="form-group">
-                <label for="spot_cvd_ma_cvd">Spot CVD / MA-CVD:</label>
-                <input type="text" id="spot_cvd_ma_cvd" name="spot_cvd_ma_cvd">
-            </div>
-            <div class="form-group">
-                <label for="market_structure_shift_retest">Market Structure Shift / Retest:</label>
-                <input type="text" id="market_structure_shift_retest" name="market_structure_shift_retest">
-            </div>
-            <button type="submit" class="btn">Add Project</button>
-        </form>
+        <div class="warning-banner">
+            ⚠️ <strong>Data Storage Notice:</strong> All project data is stored locally in your browser. Data will be lost if you clear your browser cache or switch devices.
+        </div>
 
-        <div class="project-list">
-            <h2>Existing Projects</h2>
-            <div id="projectsContainer"></div>
+        <div class="main-content">
+            <!-- Add Project Wizard -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Add New Project</h2>
+                    <p>Follow the three-step Omega Protocol evaluation</p>
+                </div>
+                <div class="card-body">
+                    <div class="wizard-container">
+                        <!-- Step Indicator -->
+                        <div class="step-indicator">
+                            <div class="progress-line" id="progressLine"></div>
+                            <div class="step active" data-step="1">
+                                <div class="step-number">1</div>
+                                <div class="step-label">Narrative</div>
+                            </div>
+                            <div class="step" data-step="2">
+                                <div class="step-number">2</div>
+                                <div class="step-label">Tokenomics</div>
+                            </div>
+                            <div class="step" data-step="3">
+                                <div class="step-number">3</div>
+                                <div class="step-label">Data</div>
+                            </div>
+                        </div>
+
+                        <div class="error-message" id="errorMessage"></div>
+
+                        <form id="projectWizard">
+                            <!-- Step 1: Narrative -->
+                            <div class="wizard-step active" data-step="1">
+                                <div class="form-group">
+                                    <label for="projectName">Project Name *</label>
+                                    <input type="text" id="projectName" name="name" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="projectTicker">Ticker Symbol</label>
+                                    <input type="text" id="projectTicker" name="ticker" placeholder="e.g., BTC, ETH">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="hotSector">Hot Sector *</label>
+                                    <select id="hotSector" name="hot_sector" required>
+                                        <option value="">Select a sector</option>
+                                        <option value="AI">AI (Artificial Intelligence)</option>
+                                        <option value="DePIN">DePIN (Decentralized Physical Infrastructure)</option>
+                                        <option value="RWA">RWA (Real-World Assets)</option>
+                                        <option value="GameFi">GameFi (Gaming Finance)</option>
+                                        <option value="DeFi">DeFi (Decentralized Finance)</option>
+                                        <option value="Infrastructure">Infrastructure</option>
+                                        <option value="L1">L1 (Layer 1)</option>
+                                        <option value="L2">L2 (Layer 2)</option>
+                                        <option value="Meme">Meme</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="sectorStrength">Sector Strength (1-10) *</label>
+                                    <input type="number" id="sectorStrength" name="sector_strength" min="1" max="10" required>
+                                    <div class="help-text">Rate the strength and capital-attracting power of this narrative</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="valueProposition">Value Proposition (1-10) *</label>
+                                    <input type="number" id="valueProposition" name="value_proposition" min="1" max="10" required>
+                                    <div class="help-text">Rate the clarity, innovation, and compelling nature of the solution</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="backingTeam">Backing & Team (1-10) *</label>
+                                    <input type="number" id="backingTeam" name="backing_team" min="1" max="10" required>
+                                    <div class="help-text">Rate the quality of VC support and team strength</div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Tokenomics -->
+                            <div class="wizard-step" data-step="2">
+                                <div class="form-group">
+                                    <label for="valuationPotential">Valuation Potential (1-10) *</label>
+                                    <input type="number" id="valuationPotential" name="valuation_potential" min="1" max="10" required>
+                                    <div class="help-text">Rate based on current FDV - lower valuations = higher scores</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="tokenUtility">Token Utility (1-10) *</label>
+                                    <input type="number" id="tokenUtility" name="token_utility" min="1" max="10" required>
+                                    <div class="help-text">Rate how integral the token is to protocol function and value accrual</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="supplyRisk">Supply Risk (1-10) *</label>
+                                    <input type="number" id="supplyRisk" name="supply_risk" min="1" max="10" required>
+                                    <div class="help-text">Rate the risk from future token unlocks and vesting schedules</div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Data -->
+                            <div class="wizard-step" data-step="3">
+                                <div class="form-group">
+                                    <label for="accumulationSignal">Accumulation Signal (1-10) *</label>
+                                    <input type="number" id="accumulationSignal" name="accumulation_signal" min="1" max="10" required>
+                                    <div class="help-text">Rate the clarity of bullish divergence between price and Spot CVD</div>
+                                </div>
+                            </div>
+
+                            <div class="wizard-actions">
+                                <button type="button" class="btn btn-secondary" id="prevButton" disabled>
+                                    ← Previous
+                                </button>
+                                <button type="button" class="btn btn-primary" id="nextButton">
+                                    Next →
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="submitButton" style="display: none;">
+                                    Add Project
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Watchlist -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="watchlist-header">
+                        <div>
+                            <h2>My Watchlist</h2>
+                            <p>Projects screened using the Omega Protocol</p>
+                        </div>
+                        <div id="projectCount" class="project-count">0 projects</div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Filters -->
+                    <div class="filters">
+                        <div class="form-group">
+                            <label for="filterSector">Filter by Sector</label>
+                            <select id="filterSector">
+                                <option value="">All Sectors</option>
+                                <option value="AI">AI</option>
+                                <option value="DePIN">DePIN</option>
+                                <option value="RWA">RWA</option>
+                                <option value="GameFi">GameFi</option>
+                                <option value="DeFi">DeFi</option>
+                                <option value="Infrastructure">Infrastructure</option>
+                                <option value="L1">L1</option>
+                                <option value="L2">L2</option>
+                                <option value="Meme">Meme</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="filterOmegaMin">Min Omega Score</label>
+                            <input type="number" id="filterOmegaMin" min="1" max="10" step="0.1" placeholder="e.g., 8.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="filterOmegaMax">Max Omega Score</label>
+                            <input type="number" id="filterOmegaMax" min="1" max="10" step="0.1" placeholder="e.g., 10.0">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" class="btn btn-secondary" id="clearFilters">Clear Filters</button>
+                        </div>
+                    </div>
+
+                    <!-- Project List -->
+                    <div id="projectList" class="project-grid">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <h3>No projects yet</h3>
+                            <p>Add your first cryptocurrency project using the wizard above</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const addProjectForm = document.getElementById('addProjectForm');
-            const projectsContainer = document.getElementById('projectsContainer');
-
-            // Function to fetch and display projects
-            async function fetchProjects() {
-                const response = await fetch('/api/projects');
-                const data = await response.json();
-                projectsContainer.innerHTML = ''; // Clear existing projects
-                data.projects.forEach(project => {
-                    const projectItem = document.createElement('div');
-                    projectItem.classList.add('project-item');
-                    projectItem.innerHTML = `
-                        <h3>${project.name}</h3>
-                        <p><strong>Hot Sector:</strong> ${project.hot_sector || 'N/A'}</p>
-                        <p><strong>Value Proposition:</strong> ${project.value_proposition || 'N/A'}</p>
-                        <p><strong>Backing & Team:</strong> ${project.backing_team || 'N/A'}</p>
-                        <p><strong>Initial Float:</strong> ${project.initial_float || 'N/A'}</p>
-                        <p><strong>Real Utility:</strong> ${project.real_utility || 'N/A'}</p>
-                        <p><strong>Fair Launch / Vesting:</strong> ${project.fair_launch_vesting || 'N/A'}</p>
-                        <p><strong>Macro Accumulation Divergence:</strong> ${project.macro_accumulation_divergence || 'N/A'}</p>
-                        <p><strong>Spot CVD / MA-CVD:</strong> ${project.spot_cvd_ma_cvd || 'N/A'}</p>
-                        <p><strong>Market Structure Shift / Retest:</strong> ${project.market_structure_shift_retest || 'N/A'}</p>
-                        <button class="btn delete-btn" data-id="${project.id}">Delete</button>
-                    `;
-                    projectsContainer.appendChild(projectItem);
-                });
-                attachDeleteListeners();
-            }
-
-            // Function to attach delete event listeners
-            function attachDeleteListeners() {
-                document.querySelectorAll('.delete-btn').forEach(button => {
-                    button.onclick = async (event) => {
-                        const projectId = event.target.dataset.id;
-                        const response = await fetch(`/api/projects/${projectId}`, {
-                            method: 'DELETE'
-                        });
-                        const result = await response.json();
-                        alert(result.message);
-                        fetchProjects(); // Refresh the list
-                    };
-                });
-            }
-
-            // Handle form submission for adding a new project
-            addProjectForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const formData = new FormData(addProjectForm);
-                const projectData = {};
-                formData.forEach((value, key) => {
-                    projectData[key] = value;
-                });
-
-                const response = await fetch('/api/projects', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(projectData)
-                });
-                const result = await response.json();
-                alert(result.message);
-                addProjectForm.reset(); // Clear the form
-                fetchProjects(); // Refresh the list
-            });
-
-            // Initial fetch of projects when the page loads
-            fetchProjects();
-        });
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
-
-
