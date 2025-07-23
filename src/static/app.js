@@ -202,7 +202,7 @@ class OmegaApp {
 
     async loadAutomatedProjects() {
         try {
-            const projects = await this.apiCall('/api/v2/projects');
+            const projects = await this.apiCall('/api/v2/projects/automated');
             this.automatedProjects = projects.data || [];
             this.lastUpdated = projects.last_updated ? new Date(projects.last_updated) : new Date();
             
@@ -222,7 +222,7 @@ class OmegaApp {
         spinner.style.display = 'inline-block';
 
         try {
-            await this.apiCall('/api/v2/projects/refresh', 'POST');
+            await this.apiCall('/api/v2/fetch-projects', 'POST');
             await this.loadAutomatedProjects();
             this.showSuccess('Automated projects refreshed successfully!');
         } catch (error) {
@@ -236,8 +236,7 @@ class OmegaApp {
 
     async analyzeCSVData(projectId, csvText) {
         try {
-            const result = await this.apiCall('/api/v2/csv/analyze', 'POST', {
-                project_id: projectId,
+            const result = await this.apiCall(`/api/v2/projects/automated/${projectId}/csv`, 'POST', {
                 csv_data: csvText
             });
             return result;

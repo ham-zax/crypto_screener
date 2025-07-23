@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Automated Tab Issue</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #testResults {
+            margin-top: 20px;
+        }
+        .tab-demo {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .nav-tabs-demo {
+            display: flex;
+            background: #f8f9fa;
+        }
+        .nav-tab-demo {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-right: 1px solid #ddd;
+        }
+        .nav-tab-demo:last-child {
+            border-right: none;
+        }
+        .nav-tab-demo.active {
+            background: #007bff;
+            color: white;
+        }
+        .tab-content-demo {
+            padding: 20px;
+            display: none;
+        }
+        .tab-content-demo.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐛 Debug: Automated Tab Issue</h1>
+    
+    <div class="debug-section">
+        <h3>1. Test Basic Tab Functionality</h3>
+        <p>This is a simplified version of the tab system to test if basic tab switching works:</p>
+        
+        <div class="tab-demo">
+            <div class="nav-tabs-demo">
+                <button class="nav-tab-demo active" data-tab="test-manual">Manual Test</button>
+                <button class="nav-tab-demo" data-tab="test-automated">Automated Test</button>
+            </div>
+            <div class="tab-content-demo active" id="test-manual">
+                <h4>Manual Tab Content</h4>
+                <p>This is the manual tab content. If you can see this, basic tab functionality works.</p>
+            </div>
+            <div class="tab-content-demo" id="test-automated">
+                <h4>Automated Tab Content</h4>
+                <p>This is the automated tab content. If you can switch to this tab, the issue might be with the API calls or data loading.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="debug-section">
+        <h3>2. Test API Connectivity</h3>
+        <button onclick="testAPIs()">Test API Endpoints</button>
+        <div id="apiResults"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>3. Test JavaScript Console</h3>
+        <button onclick="testConsole()">Check for JavaScript Errors</button>
+        <div id="consoleResults"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>4. Clear Browser Cache</h3>
+        <p>The issue might be browser caching. Try these steps:</p>
+        <ol>
+            <li>Press <kbd>Ctrl+Shift+R</kbd> (or <kbd>Cmd+Shift+R</kbd> on Mac) to hard refresh</li>
+            <li>Or press <kbd>F12</kbd> → Network tab → check "Disable cache" → refresh page</li>
+            <li>Or try opening in an incognito/private window</li>
+        </ol>
+        <button onclick="location.reload(true)">Force Refresh Page</button>
+    </div>
+
+    <div id="testResults"></div>
+
+    <script>
+        // Basic tab functionality test
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.nav-tab-demo');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabName = this.dataset.tab;
+                    
+                    // Remove active from all tabs and content
+                    document.querySelectorAll('.nav-tab-demo').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.tab-content-demo').forEach(content => content.classList.remove('active'));
+                    
+                    // Add active to clicked tab and corresponding content
+                    this.classList.add('active');
+                    document.getElementById(tabName).classList.add('active');
+                    
+                    console.log('Tab switched to:', tabName);
+                });
+            });
+        });
+
+        async function testAPIs() {
+            const apiResults = document.getElementById('apiResults');
+            apiResults.innerHTML = '<div class="status info">Testing API endpoints...</div>';
+            
+            const tests = [
+                {
+                    name: 'Health Check',
+                    url: '/api/v2/health',
+                    method: 'GET'
+                },
+                {
+                    name: 'Automated Projects',
+                    url: '/api/v2/projects/automated',
+                    method: 'GET'
+                },
+                {
+                    name: 'Fetch Projects',
+                    url: '/api/v2/fetch-projects',
+                    method: 'POST',
+                    body: JSON.stringify({save_to_database: true}),
+                    headers: {'Content-Type': 'application/json'}
+                }
+            ];
+
+            let results = '';
+            
+            for (const test of tests) {
+                try {
+                    const config = {
+                        method: test.method,
+                        headers: test.headers || {}
+                    };
+                    
+                    if (test.body) {
+                        config.body = test.body;
+                    }
+                    
+                    const response = await fetch(test.url, config);
+                    const status = response.status;
+                    
+                    if (status >= 200 && status < 300) {
+                        results += `<div class="status success">✅ ${test.name}: ${status} OK</div>`;
+                    } else {
+                        results += `<div class="status warning">⚠️ ${test.name}: ${status} ${response.statusText}</div>`;
+                    }
+                } catch (error) {
+                    results += `<div class="status error">❌ ${test.name}: ${error.message}</div>`;
+                }
+            }
+            
+            apiResults.innerHTML = results;
+        }
+
+        function testConsole() {
+            const consoleResults = document.getElementById('consoleResults');
+            
+            // Check if console has any errors
+            const originalError = console.error;
+            const errors = [];
+            
+            console.error = function(...args) {
+                errors.push(args.join(' '));
+                originalError.apply(console, arguments);
+            };
+            
+            // Test loading app.js
+            const script = document.createElement('script');
+            script.src = '/app.js';
+            script.onload = function() {
+                setTimeout(() => {
+                    if (errors.length > 0) {
+                        consoleResults.innerHTML = `
+                            <div class="status error">❌ JavaScript Errors Found:</div>
+                            ${errors.map(err => `<div class="status error">${err}</div>`).join('')}
+                        `;
+                    } else if (typeof window.app !== 'undefined') {
+                        consoleResults.innerHTML = '<div class="status success">✅ app.js loaded successfully and OmegaApp instance found</div>';
+                    } else {
+                        consoleResults.innerHTML = '<div class="status warning">⚠️ app.js loaded but no OmegaApp instance found</div>';
+                    }
+                    
+                    // Restore original console.error
+                    console.error = originalError;
+                }, 1000);
+            };
+            script.onerror = function() {
+                consoleResults.innerHTML = '<div class="status error">❌ Failed to load app.js</div>';
+                console.error = originalError;
+            };
+            
+            document.head.appendChild(script);
+        }
+
+        // Log any existing errors
+        window.addEventListener('error', function(e) {
+            console.error('Page Error:', e.message, 'at', e.filename + ':' + e.lineno);
+        });
+    </script>
+</body>
+</html>
