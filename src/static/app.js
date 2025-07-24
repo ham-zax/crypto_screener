@@ -55,28 +55,47 @@ class OmegaApp {
     }
 
     switchTab(tabName) {
-        if (this.currentTab === tabName) return;
-        
+        console.log(`[DEBUG] switchTab called with tabName: "${tabName}"`);
+
+        if (this.currentTab === tabName) {
+            console.log('[DEBUG] Tab is already active. Doing nothing.');
+            return;
+        }
+
         this.currentTab = tabName;
-        
-        // Update tab buttons with accessibility attributes
+
+        // Update tab buttons
         document.querySelectorAll('.nav-tab').forEach(btn => {
             btn.classList.remove('active');
             btn.setAttribute('aria-selected', 'false');
         });
         const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
-        activeTab.classList.add('active');
-        activeTab.setAttribute('aria-selected', 'true');
-        
+        if (activeTab) {
+            activeTab.classList.add('active');
+            activeTab.setAttribute('aria-selected', 'true');
+            console.log('[DEBUG] Active tab styles updated.');
+        } else {
+            console.error(`[DEBUG] Could not find tab button for tab: "${tabName}"`);
+        }
+
         // Update tab content
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        document.getElementById(`${tabName}Tab`).classList.add('active');
+        const activeContent = document.getElementById(`${tabName}Tab`);
+        if (activeContent) {
+            activeContent.classList.add('active');
+            console.log('[DEBUG] Active content panel updated.');
+        } else {
+            console.error(`[DEBUG] Could not find content panel for tab: "${tabName}"`);
+        }
         
         // Load data for the active tab
         if (tabName === 'automated') {
+            console.log('[DEBUG] "automated" tab selected. Calling loadAutomatedProjects...');
             this.loadAutomatedProjects();
+        } else {
+            console.log(`[DEBUG] "${tabName}" tab selected. No data load needed.`);
         }
     }
 
@@ -206,16 +225,22 @@ class OmegaApp {
     }
 
     async loadAutomatedProjects() {
+        console.log('[DEBUG] loadAutomatedProjects function started.');
         try {
-            const projects = await this.apiCall('/api/v2/projects/automated');
-            this.automatedProjects = projects.data || [];
-            this.lastUpdated = projects.last_updated ? new Date(projects.last_updated) : new Date();
+            console.log('[DEBUG] About to make API call to /api/v2/projects/automated');
+            const response = await this.apiCall('/api/v2/projects/automated');
+            console.log('[DEBUG] API call successful. Response received:', response);
+
+            this.automatedProjects = response.data || [];
+            this.lastUpdated = response.last_updated ? new Date(response.last_updated) : new Date();
+            
+            console.log(`[DEBUG] Loaded ${this.automatedProjects.length} automated projects.`);
             
             this.applyAutomatedFilters();
             this.updateLastUpdatedDisplay();
         } catch (error) {
-            console.error('Failed to load automated projects:', error);
-            this.showAutomatedProjectsError('Failed to load automated projects. Please try refreshing.');
+            console.error('[DEBUG] Failed to load automated projects:', error);
+            this.showAutomatedProjectsError('Failed to load automated projects. Check console for details.');
         }
     }
 
@@ -1277,3 +1302,5 @@ class OmegaApp {
         }, 5000);
     }
 }
+// Ensure OmegaApp is instantiated and globally accessible
+window.app = new OmegaApp();

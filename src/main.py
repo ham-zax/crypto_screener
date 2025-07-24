@@ -276,14 +276,15 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
         """Get list of automated projects with filtering and pagination."""
         # ... [Full implementation] ...
         try:
-            query = AutomatedProject.query
-            # Filtering and pagination logic here...
-            paginated = query.paginate(page=1, per_page=10, error_out=False)
-            projects = [p.to_dict() for p in paginated.items]
-            return jsonify({'projects': projects})
+           query = AutomatedProject.query
+           # Filtering and pagination logic here...
+           paginated = query.paginate(page=1, per_page=10, error_out=False)
+           projects = [p.to_dict() for p in paginated.items]
+           # --- THE FIX IS HERE ---
+           return jsonify({'data': projects, 'last_updated': datetime.utcnow().isoformat()})
         except Exception as e:
-            LOGGER.error(f"Failed to get automated projects: {e}")
-            return jsonify({'error': 'Query failed', 'message': str(e)}), 500
+           LOGGER.error(f"Failed to get automated projects: {e}")
+           return jsonify({'error': 'Query failed', 'message': str(e)}), 500
 
     # Other project endpoints would follow the same pattern:
     # @APP.route('/api/v2/projects/automated/<project_id>', methods=['GET'])

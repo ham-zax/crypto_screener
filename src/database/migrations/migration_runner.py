@@ -1,3 +1,4 @@
+print(f"__name__: {__name__}, __package__: {__package__}")
 """
 Migration Runner for Database Schema Changes
 
