@@ -167,6 +167,7 @@ else:
 # ==============================================================================
 
 # --- V1 Static File Serving ---
+
 @APP.route('/', defaults={'path': ''})
 @APP.route('/<path:path>')
 def serve(path):
@@ -285,12 +286,66 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
         except Exception as e:
            LOGGER.error(f"Failed to get automated projects: {e}")
            return jsonify({'error': 'Query failed', 'message': str(e)}), 500
+    
+    # Add this function to src/main.py
 
-    # Other project endpoints would follow the same pattern:
-    # @APP.route('/api/v2/projects/automated/<project_id>', methods=['GET'])
-    # @APP.route('/api/v2/projects/automated/<project_id>/refresh', methods=['POST'])
-    # @APP.route('/api/v2/ingestion/status', methods=['GET'])
-    # @APP.route('/api/v2/service/stats', methods=['GET'])
+
+    @APP.route('/api/v2/projects/automated/<project_id>', methods=['GET'])
+    def get_automated_project_details(project_id):
+        """Get detailed information for a single automated project."""
+        try:
+            project = AutomatedProject.query.get(project_id)
+            if project:
+                return jsonify(project.to_dict())
+            else:
+                return jsonify({'error': 'Project not found'}), 404
+        except Exception as e:
+            LOGGER.error(f"Failed to get project details for {project_id}: {e}")
+            return jsonify({'error': 'Query failed', 'message': str(e)}), 500
+
+    @APP.route('/api/v2/projects/automated/<project_id>/refresh', methods=['POST'])
+    def refresh_single_project(project_id):
+        """Trigger a data refresh for a single project."""
+        assert DB is not None
+        if not DATA_FETCHER:
+            return jsonify({'error': 'Data fetching service not available'}), 503
+        
+        try:
+            project = AutomatedProject.query.get(project_id)
+            if not project or not project.coingecko_id:
+                return jsonify({'error': 'Project or CoinGecko ID not found'}), 404
+
+            updated_projects, failed_ids = DATA_FETCHER.refresh_project_data([project.coingecko_id])
+            
+            if updated_projects:
+                # Update the project in the database
+                updated_data = updated_projects[0]
+                for key, value in updated_data.items():
+                    if hasattr(project, key):
+                        setattr(project, key, value)
+                project.update_all_scores()
+                DB.session.commit()
+                return jsonify({'message': 'Project refreshed successfully', 'project': project.to_dict()})
+            else:
+                return jsonify({'error': 'Failed to refresh project data', 'failed_id': failed_ids}), 500
+        except Exception as e:
+            DB.session.rollback()
+            LOGGER.error(f"Failed to refresh project {project_id}: {e}")
+            return jsonify({'error': 'Refresh failed', 'message': str(e)}), 500
+
+    @APP.route('/api/v2/ingestion/status', methods=['GET'])
+    def get_ingestion_status():
+        """Get the status of the data ingestion service."""
+        if not INGESTION_MANAGER:
+            return jsonify({'error': 'Ingestion manager not available'}), 503
+        return jsonify(INGESTION_MANAGER.get_ingestion_status())
+
+    @APP.route('/api/v2/service/stats', methods=['GET'])
+    def get_service_stats():
+        """Get statistics for the data fetching service."""
+        if not DATA_FETCHER:
+            return jsonify({'error': 'Data fetching service not available'}), 503
+        return jsonify(DATA_FETCHER.get_service_stats())
 
 
 # --- V2 CSV Analysis Endpoints ---
@@ -320,14 +375,39 @@ def trigger_fetch_projects():
     # ... [Full implementation] ...
     return jsonify(TASK_MANAGER.trigger_manual_fetch())
 
-    # Other task endpoints:
-    # @APP.route('/api/v2/tasks/status', methods=['GET'])
-    # @APP.route('/api/v2/tasks/schedule', methods=['POST'])
-    # @APP.route('/api/v2/tasks/schedule', methods=['GET'])
-    # @APP.route('/api/v2/tasks/history', methods=['GET'])
-    # @APP.route('/api/v2/tasks/cleanup', methods=['POST'])
+@APP.route('/api/v2/tasks/status', methods=['GET'])
+def get_task_status():
+    """Get the status of a specific task or all tasks."""
+    if not TASK_MANAGER:
+        return jsonify({'error': 'Task management not available'}), 503
+    task_id = request.args.get('task_id')
+    if task_id:
+        status_info = TASK_MANAGER.get_task_status(task_id)
+        return jsonify({'task_status': status_info})
+    else:
+        all_statuses = TASK_MANAGER.get_all_task_statuses()
+        return jsonify({'all_tasks': all_statuses})
+@APP.route('/api/v2/tasks/history', methods=['GET'])
+def get_task_history():
+    """Get the history of recently triggered tasks."""
+    if not TASK_MANAGER:
+        return jsonify({'error': 'Task management not available'}), 503
+    limit = request.args.get('limit', 50, type=int)
+    return jsonify(TASK_MANAGER.get_task_history(limit=limit))
+@APP.route('/api/v2/tasks/cleanup', methods=['POST'])
+def trigger_cleanup_task():
+    """Trigger a manual data cleanup task."""
+    if not TASK_MANAGER:
+        return jsonify({'error': 'Task management not available'}), 503
+    data = request.get_json() or {}
+    days_to_keep = data.get('days_to_keep', 30)
+    return jsonify(TASK_MANAGER.trigger_cleanup_task(days_to_keep=days_to_keep))
+
+
     # @APP.route('/api/v2/tasks/health-check', methods=['POST'])
     # @APP.route('/api/v2/tasks/test', methods=['POST'])
+    # @APP.route('/api/v2/tasks/schedule', methods=['GET'])
+
 
 
 # --- V2 Background Task Log Endpoint ---

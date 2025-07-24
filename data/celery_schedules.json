@@ -18,7 +18,7 @@
       "queue": "data_fetch",
       "priority": 8
     },
-    "created_at": "2025-07-24T00:02:54.204572",
+    "created_at": "2025-07-24T00:27:18.669370",
     "enabled": true
   },
   "dev-daily-cleanup": {
@@ -35,7 +35,7 @@
       "queue": "maintenance",
       "priority": 3
     },
-    "created_at": "2025-07-24T00:02:54.213304",
+    "created_at": "2025-07-24T00:27:18.677228",
     "enabled": true
   },
   "dev-health-check": {
@@ -50,7 +50,7 @@
       "queue": "monitoring",
       "priority": 5
     },
-    "created_at": "2025-07-24T00:02:54.221957",
+    "created_at": "2025-07-24T00:27:18.686399",
     "enabled": true
   },
   "dev-test-task": {
@@ -67,7 +67,7 @@
       "queue": "default",
       "priority": 1
     },
-    "created_at": "2025-07-24T00:02:54.231202",
+    "created_at": "2025-07-24T00:27:18.694310",
     "enabled": true
   }
 }
