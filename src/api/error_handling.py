@@ -63,7 +63,7 @@ class ErrorTracker:
         self.error_counts = {}
         self.last_cleanup = datetime.utcnow()
     
-    def record_error(self, error: Exception, context: Dict[str, Any] = None):
+    def record_error(self, error: Exception, context: Optional[Dict[str, Any]] = None):
         """Record an error with context information"""
         error_record = {
             'timestamp': datetime.utcnow(),
@@ -217,16 +217,18 @@ def handle_api_errors(
                         continue
                     break
             
-            # Record the error
-            error_tracker.record_error(last_exception, {
-                'function': func.__name__,
-                'args': str(args),
-                'kwargs': str(kwargs),
-                'attempts': retry_count + 1
-            })
-            
-            # Re-raise the last exception
-            raise last_exception
+            # Record the error and re-raise
+            if last_exception is not None:
+                error_tracker.record_error(last_exception, {
+                    'function': func.__name__,
+                    'args': str(args),
+                    'kwargs': str(kwargs),
+                    'attempts': retry_count + 1
+                })
+                raise last_exception
+            else:
+                # This shouldn't happen, but handle it gracefully
+                raise RuntimeError(f"Function {func.__name__} failed after {retry_count + 1} attempts")
         
         return wrapper
     return decorator
@@ -395,7 +397,7 @@ class APICallTracker:
     def __init__(self, api_name: str, endpoint: str):
         self.api_name = api_name
         self.endpoint = endpoint
-        self.start_time = None
+        self.start_time: Optional[float] = None
         self.success = False
     
     def __enter__(self):
@@ -403,7 +405,11 @@ class APICallTracker:
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        duration = time.time() - self.start_time
+        if self.start_time is not None:
+            duration = time.time() - self.start_time
+        else:
+            duration = 0.0
+        
         self.success = exc_type is None
         log_api_call(self.api_name, self.endpoint, duration, self.success)
         

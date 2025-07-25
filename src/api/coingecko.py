@@ -186,10 +186,13 @@ class CoinGeckoClient:
         """
         try:
             params = {"include_platform": str(include_platform).lower()}
-            data = self._make_request("coins/list", params)
+            response = self._make_request("coins/list", params)
             
-            logger.info(f"Fetched {len(data)} coins from CoinGecko")
-            return data
+            # Extract coins list from response
+            coins = response.get('coins', [])
+            
+            logger.info(f"Fetched {len(coins)} coins from CoinGecko")
+            return coins
             
         except Exception as e:
             logger.error(f"Failed to fetch coins list: {e}")
@@ -271,9 +274,9 @@ class CoinGeckoClient:
             raise APIError(f"Failed to fetch market chart data for {coin_id}: {e}")
     
     def get_markets_data(
-        self, 
-        vs_currency: str = "usd", 
-        per_page: int = 250, 
+        self,
+        vs_currency: str = "usd",
+        per_page: int = 250,
         page: int = 1,
         order: str = "market_cap_desc",
         sparkline: bool = False
@@ -300,9 +303,13 @@ class CoinGeckoClient:
                 "sparkline": str(sparkline).lower()
             }
             
-            data = self._make_request("coins/markets", params)
-            logger.info(f"Fetched {len(data)} market entries (page {page})")
-            return data
+            response = self._make_request("coins/markets", params)
+            
+            # Extract market data list from response
+            market_data = response.get('market_data', [])
+            
+            logger.info(f"Fetched {len(market_data)} market entries (page {page})")
+            return market_data
             
         except Exception as e:
             logger.error(f"Failed to fetch markets data: {e}")

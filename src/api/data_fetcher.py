@@ -21,33 +21,44 @@ from ..scoring.automated_scoring import AutomatedScoringEngine, ScoringValidator
 
 logger = logging.getLogger(__name__)
 
-# Celery task callback for progress updates
-def update_task_progress(task_id: str, current: int, total: int, status: str):
-    """
-    Update Celery task progress
-    
-    Args:
-        task_id: Celery task ID
-        current: Current progress count
-        total: Total items to process
-        status: Status message
-    """
-    try:
-        from celery import current_task
-        if current_task and current_task.request.id == task_id:
-            current_task.update_state(
-                state='PROGRESS',
-                meta={
-                    'current': current,
-                    'total': total,
-                    'status': status,
-                    'percentage': round((current / max(total, 1)) * 100, 1)
-                }
-            )
-    except Exception as e:
-        logger.debug(f"Failed to update task progress: {e}")
 
 class DataFetchingService:
+    # Celery task callback for progress updates
+    @staticmethod
+    def update_task_progress(task_id: str, current: int, total: int, status: str):
+        """
+        Update Celery task progress
+        
+        Args:
+            task_id: Celery task ID
+            current: Current progress count
+            total: Total items to process
+            status: Status message
+        """
+        try:
+            # Use Celery's AsyncResult to update task state directly
+            from celery import current_app
+            from celery.result import AsyncResult
+            
+            # Create an AsyncResult for the task
+            task = AsyncResult(task_id, app=current_app)
+            
+            # Update task state directly if backend is available
+            if task.backend:
+                task.backend.store_result(
+                    task_id,
+                    {
+                        'current': current,
+                        'total': total,
+                        'status': status,
+                        'percentage': round((current / max(total, 1)) * 100, 1)
+                    },
+                    'PROGRESS'
+                )
+            else:
+                logger.debug(f"Task backend unavailable for {task_id}")
+        except Exception as e:
+            logger.debug(f"Failed to update task progress: {e}")
     """
     Service class to orchestrate cryptocurrency data fetching and processing
     
@@ -109,7 +120,7 @@ class DataFetchingService:
             # Step 1: Fetch market data
             logger.info("Fetching market data from CoinGecko...")
             if task_id:
-                update_task_progress(task_id, 0, 100, "Fetching market data...")
+                DataFetchingService.update_task_progress(task_id, 0, 100, "Fetching market data...")
             
             raw_markets = self._fetch_filtered_markets(active_filters)
             
@@ -122,7 +133,7 @@ class DataFetchingService:
             # Step 2: Validate and filter market data
             logger.info("Validating market data...")
             if task_id:
-                update_task_progress(task_id, 10, 100, "Validating market data...")
+                DataFetchingService.update_task_progress(task_id, 10, 100, "Validating market data...")
             
             validated_markets = self.validator.validate_markets_response(raw_markets)
             
@@ -134,7 +145,7 @@ class DataFetchingService:
             # Step 3: Process projects with scoring in batches
             logger.info("Processing projects with automated scoring...")
             if task_id:
-                update_task_progress(task_id, 20, 100, "Processing projects...")
+                DataFetchingService.update_task_progress(task_id, 20, 100, "Processing projects...")
             
             processed_projects = []
             errors = []
@@ -151,7 +162,7 @@ class DataFetchingService:
                 # Update progress
                 progress_percent = 20 + int((batch_start / total_projects) * 70)
                 if task_id:
-                    update_task_progress(
+                    DataFetchingService.update_task_progress(
                         task_id,
                         progress_percent,
                         100,
@@ -178,7 +189,7 @@ class DataFetchingService:
             
             # Final progress update
             if task_id:
-                update_task_progress(task_id, 95, 100, "Finalizing results...")
+                DataFetchingService.update_task_progress(task_id, 95, 100, "Finalizing results...")
             
             fetch_metadata = self._create_fetch_metadata(
                 start_time,

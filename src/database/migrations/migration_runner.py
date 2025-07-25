@@ -32,7 +32,7 @@ class MigrationRunner:
     - Integrity validation
     """
     
-    def __init__(self, engine, migrations_path: str = None):
+    def __init__(self, engine, migrations_path: Optional[str] = None):
         """
         Initialize migration runner
         
@@ -208,9 +208,10 @@ class MigrationRunner:
                 # Start transaction for atomicity
                 with connection.begin():
                     for i, statement in enumerate(statements):
+                        # Initialize clean_statement to avoid being unbound in except block
+                        clean_statement = statement.strip()
+                        
                         try:
-                            # Clean up the statement
-                            clean_statement = statement.strip()
                             if not clean_statement or clean_statement == ';':
                                 continue
                                 
@@ -309,7 +310,7 @@ class MigrationRunner:
                 'execution_time_ms': execution_time_ms
             }
     
-    def run_migrations(self, target_version: str = None) -> Dict:
+    def run_migrations(self, target_version: Optional[str] = None) -> Dict:
         """
         Run all pending migrations up to target version
         

@@ -73,7 +73,7 @@ class VersionManager:
             latest = session.query(MigrationVersion)\
                           .order_by(MigrationVersion.applied_at.desc())\
                           .first()
-            return latest.version if latest else None
+            return str(latest.version) if latest else None
         except Exception as e:
             logger.error(f"Failed to get current version: {e}")
             return None
@@ -98,7 +98,7 @@ class VersionManager:
                 'name': v.name,
                 'applied_at': v.applied_at.isoformat(),
                 'execution_time_ms': v.execution_time_ms,
-                'has_rollback': bool(v.rollback_sql)
+                'has_rollback': v.rollback_sql is not None
             } for v in versions]
         except Exception as e:
             logger.error(f"Failed to get applied versions: {e}")
@@ -128,8 +128,8 @@ class VersionManager:
         finally:
             session.close()
     
-    def record_migration(self, version: str, name: str, rollback_sql: str = None, 
-                        execution_time_ms: int = None, checksum: str = None):
+    def record_migration(self, version: str, name: str, rollback_sql: Optional[str] = None,
+                        execution_time_ms: Optional[int] = None, checksum: Optional[str] = None):
         """
         Record a successfully applied migration
         
@@ -206,7 +206,10 @@ class VersionManager:
                              .filter(MigrationVersion.version == version)\
                              .first()
             
-            return migration.rollback_sql if migration else None
+            if migration:
+                rollback_sql = migration.rollback_sql
+                return str(rollback_sql) if rollback_sql is not None else None
+            return None
         except Exception as e:
             logger.error(f"Failed to get rollback SQL for {version}: {e}")
             return None
@@ -243,7 +246,7 @@ class VersionManager:
             return [{
                 'version': m.version,
                 'name': m.name,
-                'rollback_sql': m.rollback_sql,
+                'rollback_sql': str(m.rollback_sql) if m.rollback_sql is not None else None,
                 'applied_at': m.applied_at.isoformat()
             } for m in rollback_migrations]
             
@@ -269,7 +272,7 @@ class VersionManager:
             issues = []
             
             # Check for missing rollback SQL
-            no_rollback = [m for m in migrations if not m.rollback_sql]
+            no_rollback = [m for m in migrations if m.rollback_sql is None]
             if no_rollback:
                 issues.append({
                     'type': 'missing_rollback',
@@ -291,7 +294,7 @@ class VersionManager:
                 'valid': len(issues) == 0,
                 'total_migrations': len(migrations),
                 'issues': issues,
-                'current_version': migrations[-1].version if migrations else None
+                'current_version': str(migrations[-1].version) if migrations else None
             }
             
         except Exception as e:
@@ -327,7 +330,7 @@ class VersionManager:
                 'name': m.name,
                 'applied_at': m.applied_at.isoformat(),
                 'execution_time_ms': m.execution_time_ms,
-                'has_rollback': bool(m.rollback_sql),
+                'has_rollback': m.rollback_sql is not None,
                 'checksum': m.checksum
             } for m in migrations]
             

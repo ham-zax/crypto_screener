@@ -52,29 +52,26 @@ class DatabaseConfig:
     
     def create_engine(self, **kwargs):
         """Create SQLAlchemy engine with appropriate configuration"""
-        default_config = {
-            'echo': os.getenv('DB_ECHO', 'false').lower() == 'true',
-            'pool_pre_ping': True,
-        }
+        # Create a new dictionary for configuration
+        engine_config = {}
         
+        # Add common configuration
+        engine_config['echo'] = os.getenv('DB_ECHO', 'false').lower() == 'true'
+        engine_config['pool_pre_ping'] = True
+        
+        # Add environment-specific configuration
         if self.environment == 'development':
-            # SQLite specific configuration
-            default_config.update({
-                'connect_args': {'check_same_thread': False}
-            })
+            engine_config['connect_args'] = {'check_same_thread': False}
         else:
-            # PostgreSQL specific configuration
-            default_config.update({
-                'pool_size': int(os.getenv('DB_POOL_SIZE', '10')),
-                'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', '20')),
-                'pool_timeout': int(os.getenv('DB_POOL_TIMEOUT', '30')),
-                'pool_recycle': int(os.getenv('DB_POOL_RECYCLE', '3600')),
-            })
+            engine_config['pool_size'] = int(os.getenv('DB_POOL_SIZE', '10'))
+            engine_config['max_overflow'] = int(os.getenv('DB_MAX_OVERFLOW', '20'))
+            engine_config['pool_timeout'] = int(os.getenv('DB_POOL_TIMEOUT', '30'))
+            engine_config['pool_recycle'] = int(os.getenv('DB_POOL_RECYCLE', '3600'))
         
         # Override with any provided kwargs
-        default_config.update(kwargs)
+        engine_config.update(kwargs)
         
-        self.engine = create_engine(self.database_url, **default_config)
+        self.engine = create_engine(self.database_url, **engine_config)
         return self.engine
     
     def create_session_factory(self):
@@ -89,6 +86,10 @@ class DatabaseConfig:
         """Get a new database session"""
         if not self.session_factory:
             self.create_session_factory()
+        
+        # Ensure session factory is properly initialized
+        if self.session_factory is None:
+            raise RuntimeError("Session factory not initialized")
         
         return self.session_factory()
     
