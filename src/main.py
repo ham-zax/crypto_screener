@@ -502,3 +502,7 @@ if __name__ == '__main__':
     # Note: `debug=True` is not recommended for production.
     # Use a WSGI server like Gunicorn or uWSGI instead.
     APP.run(host='0.0.0.0', port=5000, debug=True)
+
+# Expose lowercase aliases for compatibility with clear_projects.py
+app = APP
+db = DB
