@@ -2,8 +2,9 @@ import yaml
 import logging
 from typing import Dict, Any, Optional
 
-# Placeholder imports for type hints; update as needed for your codebase
-# from src.models.api_responses import CoinGeckoMarket, CoinGeckoCoinDetails
+
+# --- FIX: Add the correct, specific imports ---
+from src.models.api_responses import CoinGeckoMarket, CoinGeckoCoinDetails
 
 logger = logging.getLogger(__name__)
 
@@ -28,48 +29,41 @@ class ScoringEngine:
             logger.error(f"FATAL: Failed to load or parse scoring config: {e}")
             raise
 
-    def _calculate_sector_strength(self, market, details: Optional[Any]) -> float:
+    def _calculate_sector_strength(self, market: CoinGeckoMarket, details: Optional[CoinGeckoCoinDetails]) -> float:
         """Implements rule AS-01a."""
         category_map = self.config['narrative']['sector_strength_map']
         primary_category = details.get_primary_category() if details else None
-        
         if not primary_category:
             return category_map['default_score']
-
-        # Normalize category name (e.g., "Layer 1 (L1)" -> "l1")
         normalized_category = ''.join(filter(str.isalnum, primary_category.lower()))
-
-        # Look for a direct or partial match
         for key, score in category_map.items():
             if key in normalized_category:
                 return score
         return category_map['default_score']
 
-    def _calculate_valuation_potential(self, market) -> float:
+    def _calculate_valuation_potential(self, market: CoinGeckoMarket) -> float:
         """Implements rule AS-02a."""
-        market_cap = getattr(market, 'market_cap', None)
+        market_cap = market.market_cap
         if market_cap is None:
             return 1.0 # Lowest score if no market cap data
-
         tiers = self.config['tokenomics']['valuation_potential_tiers']
         for tier in tiers:
             if market_cap < tier['max_market_cap']:
                 return tier['score']
         return 1.0 # Should not be reached due to '.inf' tier
 
-    def _calculate_supply_risk(self, market) -> float:
+    def _calculate_supply_risk(self, market: CoinGeckoMarket) -> float:
         """Implements rule AS-02c."""
-        ratio = market.get_circulation_ratio() if hasattr(market, 'get_circulation_ratio') else None
+        ratio = market.get_circulation_ratio()
         if ratio is None:
             return 1.0 # Lowest score if data is unavailable, per spec
-
         tiers = self.config['tokenomics']['supply_risk_tiers']
         for tier in tiers:
             if ratio >= tier['min_ratio']:
                 return tier['score']
         return 1.0 # Should not be reached
 
-    def calculate_all_automated_scores(self, market, details: Optional[Any]) -> Dict[str, Any]:
+    def calculate_all_automated_scores(self, market: CoinGeckoMarket, details: Optional[CoinGeckoCoinDetails]) -> Dict[str, Any]:
         """
         Orchestrates the calculation of all automated scores for a project.
         """

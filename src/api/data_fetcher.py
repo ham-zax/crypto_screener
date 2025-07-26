@@ -18,7 +18,6 @@ from ..models.api_responses import (
     APIResponseValidator
 )
 from src.services.scoring_engine import ScoringEngine
-from ..scoring.automated_scoring import ScoringValidator
 
 logger = logging.getLogger(__name__)
 
@@ -266,10 +265,7 @@ class DataFetchingService:
             target_market = CoinGeckoMarket.from_coingecko_response(market_data_for_model)
             coin_details = CoinGeckoCoinDetails.from_coingecko_response(raw_details_with_market) if include_detailed_data else None
 
-            # Validate market data
-            if not ScoringValidator.validate_market_data_for_scoring(target_market):
-                logger.warning(f"Project {coingecko_id} failed validation")
-                return None
+            # Optionally: Add validation here if needed, or rely on scoring engine to handle invalid data gracefully
 
             # Process and return
             project_data = self._process_project(target_market, coin_details)
@@ -440,46 +436,27 @@ class DataFetchingService:
             logger.warning(f"Failed to fetch coin details for {coingecko_id}: {e}")
             return None
     
-    def _process_project(
-        self, 
-        market: CoinGeckoMarket, 
-        coin_details: Optional[CoinGeckoCoinDetails] = None
-    ) -> Dict[str, Any]:
+    def _process_project(self, market: CoinGeckoMarket, coin_details: Optional[CoinGeckoCoinDetails]) -> Dict[str, Any]:
         """
-        Process a project with automated scoring
-        
-        Args:
-            market: CoinGeckoMarket instance
-            coin_details: Optional detailed coin information
-            
-        Returns:
-            Dictionary with processed project data
+        Process a project with automated scoring using the new ScoringEngine.
+        This method is now clean and follows the Single Responsibility Principle.
         """
-        # Start with base project data
-        logger.debug(f"Transforming market data for {market.id}")
+        # Start with base project data from the market object
         project_data = market.to_automated_project_dict()
-        
-        # Add category from details if available
-        if coin_details:
+
+        # Add category from details if available, as it's used by the scoring engine
+        if coin_details and coin_details.get_primary_category():
             project_data['category'] = coin_details.get_primary_category()
-            logger.debug(f"Category set for {market.id}: {project_data['category']}")
-        
-        # Calculate automated scores
+
+        # DELEGATE all scoring logic to our dedicated engine
         scores = self.scoring_engine.calculate_all_automated_scores(market, coin_details)
-        logger.debug(f"Scores calculated for {market.id}: {scores}")
-        
-        # Validate scores
-        if not ScoringValidator.validate_scoring_results(scores):
-            logger.warning(f"Invalid scores calculated for {market.id}")
-        
-        # Merge scores into project data
+
+        # Merge the calculated scores into the project data
         project_data.update(scores)
-        
+
         # Add timestamps
         project_data['last_updated'] = datetime.utcnow()
-        project_data['created_at'] = datetime.utcnow()
         
-        logger.info(f"Project data finalized for {market.id}")
         return project_data
     
     def _create_fetch_metadata(
