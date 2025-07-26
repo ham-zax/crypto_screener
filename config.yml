@@ -50,3 +50,10 @@ scoring:
 # Parameters for AS-03: Data Score (from user-pasted data)
 data_score_rules:
   min_periods: 90 # BR-09 & AS-03b: Minimum data points required
+  # AS-03b: Scoring logic for Price/CVD Divergence
+  # Conditions: 'positive', 'non_positive', 'any'
+  divergence_scores:
+    - { price_slope: 'non_positive', cvd_slope: 'positive', score: 10.0, label: 'Bullish Divergence' }
+    - { price_slope: 'positive',     cvd_slope: 'positive', score: 7.0,  label: 'Bullish Confirmation' }
+    - { price_slope: 'non_positive', cvd_slope: 'non_positive', score: 3.0,  label: 'Bearish Confirmation' }
+    - { price_slope: 'positive',     cvd_slope: 'non_positive', score: 1.0,  label: 'Bearish Divergence' }
