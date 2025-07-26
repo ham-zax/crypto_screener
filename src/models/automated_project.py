@@ -7,135 +7,95 @@ Based on V2 specification requirements for hybrid manual/automated scoring.
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Float, Boolean, DateTime, Text, JSON, ForeignKey
+from sqlalchemy import (
+    Column, String, Float, Boolean, DateTime, Text, JSON, ForeignKey
+)
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+# --- NEW IMPORTS for Modern Typing ---
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from typing import TYPE_CHECKING, Optional, List
 
-# Try to import Flask-SQLAlchemy db, fallback to pure SQLAlchemy Base
+from typing import Any
 try:
     from ..database.config import db
-    BaseClass = db.Model
-except (ImportError, AttributeError):
-    from ..database.config import Base
+    BaseClass: Any
+    # Only assign BaseClass if db and db.Model exist, else fallback
+    if hasattr(db, "Model"):
+        BaseClass = getattr(db, "Model")
+    else:
+        from sqlalchemy.orm import declarative_base
+        Base = declarative_base()
+        BaseClass = Base
+except Exception:
+    from sqlalchemy.orm import declarative_base
+    Base = declarative_base()
     BaseClass = Base
 
 class AutomatedProject(BaseClass):
     """
-    Main project model supporting both manual (V1) and automated (V2) projects
-    
-    Tracks all scoring components for the Omega Protocol:
-    - Narrative Score (Sector Strength + Value Proposition + Backing & Team)
-    - Tokenomics Score (Valuation Potential + Token Utility + Supply Risk)
-    - Data Score (calculated from user-uploaded CSV data)
+    Main project model using the fully type-annotated SQLAlchemy 2.0 style.
+    This provides maximum safety and editor support.
     """
     
     __tablename__ = 'projects'
+
+    # --- Correctly Typed Model Attributes using Mapped ---
     
     # Primary key and identification
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String(255), nullable=False, index=True)
-    ticker = Column(String(50), index=True)
-    coingecko_id = Column(String(255), unique=True, nullable=True, index=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    ticker: Mapped[Optional[str]] = mapped_column(String(50), index=True, nullable=True)
+    coingecko_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True, index=True)
     
-    # Source tracking for hybrid V1/V2 support
-    data_source = Column(String(20), nullable=False, index=True)  # 'manual' or 'automated'
-    created_via = Column(String(20), nullable=False)  # 'wizard' or 'api_ingestion'
+    # Source tracking
+    data_source: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    created_via: Mapped[str] = mapped_column(String(20), nullable=False)
     
-    # Market data (populated for automated projects from CoinGecko)
-    market_cap = Column(Float)  # USD market capitalization
-    circulating_supply = Column(Float)  # Circulating token supply
-    total_supply = Column(Float)  # Total/max token supply
-    category = Column(String(100), index=True)  # CoinGecko category
+    # Market data
+    market_cap: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    circulating_supply: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    total_supply: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String(100), index=True, nullable=True)
     
-    # Narrative Score Components (AS-01)
-    sector_strength = Column(Float)  # AS-01a: Automated mapping from category
-    value_proposition = Column(Float)  # AS-01c: Default 5 (neutral)
-    backing_team = Column(Float)  # AS-01b: Default 5 (neutral)
-    
-    # Tokenomics Score Components (AS-02)
-    valuation_potential = Column(Float)  # AS-02a: Market cap based scoring
-    token_utility = Column(Float)  # AS-02b: Default 5 (neutral)
-    supply_risk = Column(Float)  # AS-02c: Circulation ratio based scoring
-    
-    # Data Score Component (AS-03)
-    accumulation_signal = Column(Float)  # AS-03b: Calculated from CSV analysis
+    # Score Components
+    sector_strength: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    value_proposition: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    backing_team: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    valuation_potential: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    token_utility: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    supply_risk: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    accumulation_signal: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
     # Calculated Pillar Scores
-    narrative_score = Column(Float)  # Average of narrative components
-    tokenomics_score = Column(Float)  # Average of tokenomics components
-    data_score = Column(Float)  # Same as accumulation_signal
+    narrative_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    tokenomics_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    data_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
     # Final Omega Score
-    omega_score = Column(Float)  # Calculated only when all pillars present
+    omega_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
-    # State management (AS-05)
-    has_data_score = Column(Boolean, default=False, index=True)  # Tracks completion state
+    # State management
+    has_data_score: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     
     # Timestamps
-    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    last_updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
     # Relationships
-    csv_uploads = relationship("CSVData", back_populates="project", cascade="all, delete-orphan")
+    # Note the special syntax for typed relationships
+    csv_uploads: Mapped[List["CSVData"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     
-    def calculate_narrative_score(self):
-        """Calculate Narrative Score as average of components (AS-01)"""
-        components = [self.sector_strength, self.value_proposition, self.backing_team]
-        valid_components = [c for c in components if c is not None]
-        
-        if valid_components:
-            self.narrative_score = sum(valid_components) / len(valid_components)
-        else:
-            self.narrative_score = None
-        
-        return self.narrative_score
-    
-    def calculate_tokenomics_score(self):
-        """Calculate Tokenomics Score as average of components (AS-02)"""
-        components = [self.valuation_potential, self.token_utility, self.supply_risk]
-        valid_components = [c for c in components if c is not None]
-        
-        if valid_components:
-            self.tokenomics_score = sum(valid_components) / len(valid_components)
-        else:
-            self.tokenomics_score = None
-        
-        return self.tokenomics_score
-    
-    def calculate_data_score(self):
-        """Set Data Score equal to Accumulation Signal (AS-03)"""
-        if self.accumulation_signal is not None:
-            self.data_score = self.accumulation_signal
-            self.has_data_score = True
-        else:
-            self.data_score = None
-            self.has_data_score = False
-        
-        return self.data_score
-    
-    def calculate_omega_score(self):
-        """
-        Calculate final Omega Score only when all pillars are present (AS-05)
-        
-        Returns None if any pillar is missing, preventing display of incomplete scores.
-        """
-        if all(score is not None for score in [self.narrative_score, self.tokenomics_score, self.data_score]):
-            self.omega_score = (self.narrative_score + self.tokenomics_score + self.data_score) / 3
-        else:
-            self.omega_score = None
-        
-        return self.omega_score
-    
-    def update_all_scores(self):
-        """Recalculate all derived scores"""
-        self.calculate_narrative_score()
-        self.calculate_tokenomics_score()
-        self.calculate_data_score()
-        self.calculate_omega_score()
-        self.last_updated = datetime.utcnow()
+    # --- BUSINESS LOGIC MOVED TO ProjectService ---
+    # The methods calculate_narrative_score, calculate_tokenomics_score,
+    # calculate_data_score, calculate_omega_score, and update_all_scores
+    # have been removed from this class.
     
     def get_omega_status(self):
         """Get the current Omega Score status for UI display"""
+        # Add assertions to guide the type checker
+        assert isinstance(self.omega_score, (float, int)) or self.omega_score is None
+        assert isinstance(self.has_data_score, bool)
+
         if self.omega_score is not None:
             return {
                 'status': 'complete',
@@ -152,7 +112,7 @@ class AutomatedProject(BaseClass):
             return {
                 'status': 'incomplete',
                 'score': None,
-                'display': 'N/A'
+                'display': 'Incomplete'
             }
     
     def to_dict(self):
@@ -181,8 +141,8 @@ class AutomatedProject(BaseClass):
             'omega_score': self.omega_score,
             'has_data_score': self.has_data_score,
             'omega_status': self.get_omega_status(),
-            'last_updated': self.last_updated.isoformat() if self.last_updated else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'last_updated': self.last_updated.isoformat() if getattr(self, "last_updated", None) else None,
+            'created_at': self.created_at.isoformat() if getattr(self, "created_at", None) else None
         }
     
     def __repr__(self):
@@ -191,39 +151,40 @@ class AutomatedProject(BaseClass):
 
 class CSVData(BaseClass):
     """
-    Model for tracking CSV data uploads and analysis results
-    
-    Supports the US-06 requirement for pasting TradingView CSV data
-    and calculating Data Scores through linear regression analysis.
+    Model for tracking CSV data uploads and analysis results,
+    updated to the fully type-annotated SQLAlchemy 2.0 style.
     """
     
     __tablename__ = 'csv_data'
     
-    # Primary key and foreign key
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey('projects.id'), nullable=False, index=True)
+    # --- Correctly Typed Model Attributes using Mapped ---
+    
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('projects.id'), nullable=False, index=True)
     
     # CSV data storage
-    raw_data = Column(Text, nullable=False)  # Original pasted CSV text
-    processed_data = Column(JSON)  # Parsed and validated data structure
+    raw_data: Mapped[str] = mapped_column(Text, nullable=False)
+    processed_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     # Analysis results
-    data_score = Column(Float)  # Calculated accumulation signal score (1-10)
-    analysis_metadata = Column(JSON)  # Analysis details for transparency
+    data_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    analysis_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     # Validation results
-    validation_errors = Column(JSON)  # Any parsing or validation errors
-    is_valid = Column(Boolean, default=False)  # Whether data passed validation
+    validation_errors: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    is_valid: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
     
     # Timestamps
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
-    analyzed_at = Column(DateTime)  # When analysis was completed
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    analyzed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     # Relationship
-    project = relationship("AutomatedProject", back_populates="csv_uploads")
+    project: Mapped["AutomatedProject"] = relationship(back_populates="csv_uploads")
     
     def to_dict(self):
         """Convert model to dictionary for JSON serialization"""
+        uploaded_at_val = getattr(self, "uploaded_at", None)
+        analyzed_at_val = getattr(self, "analyzed_at", None)
         return {
             'id': str(self.id),
             'project_id': str(self.project_id),
@@ -231,8 +192,8 @@ class CSVData(BaseClass):
             'analysis_metadata': self.analysis_metadata,
             'validation_errors': self.validation_errors,
             'is_valid': self.is_valid,
-            'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None,
-            'analyzed_at': self.analyzed_at.isoformat() if self.analyzed_at else None
+            'uploaded_at': uploaded_at_val.isoformat() if isinstance(uploaded_at_val, datetime) else None,
+            'analyzed_at': analyzed_at_val.isoformat() if isinstance(analyzed_at_val, datetime) else None
         }
     
     def __repr__(self):

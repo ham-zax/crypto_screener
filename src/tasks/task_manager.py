@@ -80,7 +80,7 @@ class TaskManager:
                 }
             
             # Submit task
-            task_result = scheduled_tasks.fetch_and_update_projects.apply_async(
+            task_result = scheduled_tasks.fetch_and_update_projects.apply_async(  # type: ignore[attr-defined]
                 kwargs={
                     'filters': filters,
                     'save_to_database': save_to_database
@@ -140,7 +140,7 @@ class TaskManager:
                     'message': 'Background task system is not running'
                 }
             
-            task_result = scheduled_tasks.cleanup_old_data.apply_async(
+            task_result = scheduled_tasks.cleanup_old_data.apply_async(  # type: ignore[attr-defined]
                 kwargs={'days_to_keep': days_to_keep},
                 priority=priority,
                 queue='maintenance'
@@ -190,7 +190,7 @@ class TaskManager:
                     'message': 'Background task system is not running'
                 }
             
-            task_result = scheduled_tasks.health_check_task.apply_async(
+            task_result = scheduled_tasks.health_check_task.apply_async(  # type: ignore[attr-defined]
                 priority=priority,
                 queue='monitoring'
             )
@@ -243,7 +243,7 @@ class TaskManager:
                     'message': 'Background task system is not running'
                 }
             
-            task_result = scheduled_tasks.test_task.apply_async(
+            task_result = scheduled_tasks.test_task.apply_async(  # type: ignore[attr-defined]
                 args=[message],
                 priority=priority,
                 queue='default'
@@ -276,39 +276,58 @@ class TaskManager:
     def get_task_status(self, task_id: str) -> Dict[str, Any]:
         """
         Get status of a specific task
-        
+
         Args:
             task_id: Celery task ID
-            
+
         Returns:
             Task status information
         """
+        from celery.exceptions import NotRegistered
+
         try:
             if not self.is_celery_available():
                 return {
                     'status': 'unavailable',
                     'error': 'Celery not available'
                 }
-            
+
             result = AsyncResult(task_id, app=self.celery_app)
-            
+
+            # --- Robust serialization fix ---
+            if result.ready():
+                if isinstance(result.result, NotRegistered):
+                    serializable_result = "Task ID not found in the result backend. It may have expired or is invalid."
+                elif isinstance(result.result, Exception):
+                    serializable_result = str(result.result)
+                else:
+                    # Defensive: if result.result is not JSON serializable, convert to string
+                    try:
+                        import json
+                        json.dumps(result.result)
+                        serializable_result = result.result
+                    except Exception:
+                        serializable_result = str(result.result)
+            else:
+                serializable_result = None
+
             status_info = {
                 'task_id': task_id,
                 'status': result.status,
                 'ready': result.ready(),
                 'successful': result.successful() if result.ready() else None,
                 'failed': result.failed() if result.ready() else None,
-                'result': result.result if result.ready() else None,
+                'result': serializable_result,
                 'traceback': result.traceback if result.failed() else None,
                 'info': result.info
             }
-            
+
             # Add timing information if available
             if hasattr(result, 'date_done') and result.date_done:
                 status_info['completed_at'] = result.date_done.isoformat()
-            
+
             return status_info
-            
+
         except Exception as e:
             logger.error(f"Failed to get task status for {task_id}: {e}")
             return {
@@ -316,7 +335,7 @@ class TaskManager:
                 'error': str(e),
                 'task_id': task_id
             }
-    
+
     def get_all_task_statuses(self) -> Dict[str, Any]:
         """
         Get status of all recent tasks
@@ -433,13 +452,22 @@ class TaskManager:
             # Get worker information
             stats = {}
             try:
+                inspect = self.celery_app.control.inspect()
                 stats = inspect.stats() or {}
-                active = inspect.active() or {}
-                registered = inspect.registered() or {}
+                try:
+                    active = inspect.active() or {}
+                except Exception:
+                    active = {}
+                try:
+                    registered = inspect.registered() or {}
+                except Exception:
+                    registered = {}
                 conf = inspect.conf() or {}
             except Exception as e:
                 logger.warning(f"Failed to inspect workers: {e}")
                 stats = {}
+                active = {}
+                registered = {}
             
             workers = []
             for worker_name, worker_stats in stats.items():
@@ -449,8 +477,8 @@ class TaskManager:
                     'pool': worker_stats.get('pool', {}).get('implementation', 'unknown'),
                     'processes': worker_stats.get('pool', {}).get('processes', []),
                     'total_tasks': worker_stats.get('total', {}),
-                    'active_tasks': len(active.get(worker_name, [])),
-                    'registered_tasks': len(registered.get(worker_name, [])),
+                    'active_tasks': len(active.get(worker_name, [])) if 'active' in locals() else 0,
+                    'registered_tasks': len(registered.get(worker_name, [])) if 'registered' in locals() else 0,
                     'broker_info': worker_stats.get('broker', {}),
                     'clock': worker_stats.get('clock'),
                     'rusage': worker_stats.get('rusage', {})
@@ -479,6 +507,7 @@ class TaskManager:
                 'workers': []
             }
     
+            
     def get_queue_info(self) -> Dict[str, Any]:
         """
         Get information about Celery queues
@@ -504,9 +533,9 @@ class TaskManager:
                               if route.get('queue') == queue.name]
                 
                 queue_info.append({
-                    'name': queue.name,
-                    'exchange': queue.exchange.name,
-                    'routing_key': queue.routing_key,
+                    'name': queue.name if queue is not None else None,
+                    'exchange': queue.exchange.name if queue and queue.exchange else None,
+                    'routing_key': queue.routing_key if queue is not None else None,
                     'routed_tasks': routed_tasks,
                     'task_count': len(routed_tasks)
                 })

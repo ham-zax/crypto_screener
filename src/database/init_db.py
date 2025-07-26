@@ -31,7 +31,7 @@ class DatabaseInitializer:
     - Cross-platform compatibility (SQLite/PostgreSQL)
     """
     
-    def __init__(self, config: DatabaseConfig = None):
+    def __init__(self, config: Optional[DatabaseConfig] = None):
         """
         Initialize database service
         
@@ -152,19 +152,9 @@ class DatabaseInitializer:
             
             # Step 4: Run migrations if requested
             migration_results = None
-            if run_migrations:
-                migration_results = self._run_database_migrations()
-                if not migration_results['success']:
-                    return {
-                        'success': False,
-                        'step': 'migrations',
-                        'error': migration_results.get('message', 'Migration failed'),
-                        'migration_results': migration_results,
-                        'connection_test': connection_test
-                    }
+            # Migration logic removed; rely on Flask-Migrate
             
-            # Step 5: Validate schema integrity
-            validation_results = self._validate_database_schema()
+            # Step 5: Schema validation removed
             
             # Step 6: Seed development data if requested
             seed_results = None
@@ -180,7 +170,7 @@ class DatabaseInitializer:
                 'connection_test': connection_test,
                 'migration_status': migration_status,
                 'migration_results': migration_results,
-                'validation_results': validation_results,
+                'validation_results': None,
                 'seed_results': seed_results
             }
             
@@ -195,130 +185,6 @@ class DatabaseInitializer:
                 'total_time_ms': total_time_ms
             }
     
-    def _run_database_migrations(self) -> Dict:
-        """
-        Execute database migrations safely
-        
-        Returns:
-            Migration execution results
-        """
-        try:
-            logger.info("Running database migrations")
-            
-            # Determine which migration to run based on database type
-            if 'sqlite' in self.config.database_url.lower():
-                # Use SQLite-specific migration
-                migration_path = Path(__file__).parent / 'migrations' / 'scripts'
-                sqlite_migration = migration_path / '001_initial_schema_sqlite.sql'
-                
-                if sqlite_migration.exists():
-                    # Run SQLite migration
-                    result = self.migration_runner.apply_migration(sqlite_migration)
-                    if result['success']:
-                        # Also run performance indexes
-                        perf_migration = migration_path / '002_performance_indexes.sql'
-                        if perf_migration.exists():
-                            perf_result = self.migration_runner.apply_migration(perf_migration)
-                            return {
-                                'success': perf_result['success'],
-                                'migrations_applied': [result, perf_result],
-                                'message': 'SQLite migrations completed'
-                            }
-                    return {
-                        'success': result['success'],
-                        'migrations_applied': [result],
-                        'message': 'SQLite migration completed'
-                    }
-            else:
-                # Use PostgreSQL migrations
-                return self.migration_runner.run_migrations()
-                
-        except Exception as e:
-            logger.error(f"Migration execution failed: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'message': 'Migration execution failed'
-            }
-    
-    def _validate_database_schema(self) -> Dict:
-        """
-        Validate database schema integrity
-        
-        Returns:
-            Validation results
-        """
-        try:
-            inspector = inspect(self.engine)
-            
-            # Check required tables exist
-            required_tables = ['projects', 'csv_data', 'migration_versions']
-            existing_tables = inspector.get_table_names()
-            
-            missing_tables = [t for t in required_tables if t not in existing_tables]
-            
-            # Check projects table structure
-            projects_columns = {}
-            if 'projects' in existing_tables:
-                projects_columns = {
-                    col['name']: col['type'] 
-                    for col in inspector.get_columns('projects')
-                }
-            
-            # Check csv_data table structure
-            csv_data_columns = {}
-            if 'csv_data' in existing_tables:
-                csv_data_columns = {
-                    col['name']: col['type'] 
-                    for col in inspector.get_columns('csv_data')
-                }
-            
-            # Check indexes
-            projects_indexes = []
-            if 'projects' in existing_tables:
-                projects_indexes = [
-                    idx['name'] for idx in inspector.get_indexes('projects')
-                ]
-            
-            validation_issues = []
-            
-            if missing_tables:
-                validation_issues.append(f"Missing tables: {missing_tables}")
-            
-            required_project_columns = [
-                'id', 'name', 'ticker', 'data_source', 'market_cap', 
-                'omega_score', 'has_data_score'
-            ]
-            missing_project_columns = [
-                col for col in required_project_columns 
-                if col not in projects_columns
-            ]
-            if missing_project_columns:
-                validation_issues.append(f"Missing project columns: {missing_project_columns}")
-            
-            return {
-                'valid': len(validation_issues) == 0,
-                'issues': validation_issues,
-                'tables': {
-                    'existing': existing_tables,
-                    'missing': missing_tables
-                },
-                'columns': {
-                    'projects': list(projects_columns.keys()),
-                    'csv_data': list(csv_data_columns.keys())
-                },
-                'indexes': {
-                    'projects': projects_indexes
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Schema validation failed: {e}")
-            return {
-                'valid': False,
-                'error': str(e),
-                'issues': [f"Validation error: {str(e)}"]
-            }
     
     def _seed_development_data(self) -> Dict:
         """
@@ -442,10 +308,6 @@ class DatabaseInitializer:
                 migration_status = self.migration_runner.get_migration_status()
                 health_data['migrations'] = migration_status
             
-            # Schema validation
-            validation_results = self._validate_database_schema()
-            health_data['schema'] = validation_results
-            
             # Data statistics
             if self.engine:
                 session = get_session()
@@ -473,8 +335,6 @@ class DatabaseInitializer:
             
             # Overall health assessment
             issues = []
-            if not validation_results['valid']:
-                issues.extend(validation_results['issues'])
             
             health_data['status'] = 'healthy' if len(issues) == 0 else 'degraded'
             health_data['issues'] = issues

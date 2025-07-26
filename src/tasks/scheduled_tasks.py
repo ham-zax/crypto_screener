@@ -21,7 +21,7 @@ from celery import current_task
 from celery.exceptions import Retry
 
 # Import Celery app
-from .celery_app import celery_app
+from .celery_config import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,16 @@ def fetch_and_update_projects(
             # Process projects in batches
             session = db_config.get_session()
             try:
+                # --- BEGIN N+1 ELIMINATION ---
+                # Gather all coingecko_ids from all projects
+                project_ids_from_api = [p['coingecko_id'] for p in projects if p.get('coingecko_id')]
+                # Fetch all existing projects in one query
+                existing_projects_query = session.query(AutomatedProject).filter(
+                    AutomatedProject.coingecko_id.in_(project_ids_from_api)
+                )
+                # Build a map for fast lookup
+                existing_projects_map = {p.coingecko_id: p for p in existing_projects_query}
+                # --- END N+1 ELIMINATION ---
                 for i in range(0, len(projects), batch_size):
                     batch = projects[i:i + batch_size]
                     
@@ -132,10 +142,8 @@ def fetch_and_update_projects(
                                 f"name={project_data.get('name', 'unknown')}, "
                                 f"symbol={project_data.get('symbol', 'unknown')}"
                             )
-                            # Check if project exists
-                            existing = session.query(AutomatedProject).filter_by(
-                                coingecko_id=project_data['coingecko_id']
-                            ).first()
+                            # Use map lookup instead of per-project query
+                            existing = existing_projects_map.get(project_data.get('coingecko_id'))
                             
                             if existing:
                                 # Update existing project (preserve data score)
@@ -152,12 +160,16 @@ def fetch_and_update_projects(
                                 existing.accumulation_signal = old_accumulation_signal
                                 existing.has_data_score = old_has_data_score
                                 
-                                existing.update_all_scores()
+                                from ..services import project_service
+                                project_service.update_all_scores(existing)
+                                logger.info(f"[DEBUG] Updated all scores for existing project {existing.id} in fetch_and_update_projects")
                                 updated_count += 1
                             else:
                                 # Create new project
                                 new_project = AutomatedProject(**project_data)
-                                new_project.update_all_scores()
+                                from ..services import project_service
+                                project_service.update_all_scores(new_project)
+                                logger.info(f"[DEBUG] Updated all scores for new project {getattr(new_project, 'id', 'unknown')} in fetch_and_update_projects")
                                 session.add(new_project)
                                 saved_count += 1
                         

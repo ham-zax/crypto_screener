@@ -217,7 +217,7 @@ class DataFetchingService:
             return [], fetch_metadata
     
     def fetch_single_project(
-        self, 
+        self,
         coingecko_id: str,
         include_detailed_data: bool = True
     ) -> Optional[Dict[str, Any]]:
@@ -234,38 +234,39 @@ class DataFetchingService:
         logger.info(f"Fetching single project: {coingecko_id}")
         
         try:
-            # Fetch market data for single coin
-            markets_data = self.client.get_markets_data(per_page=250, page=1)
-            
-            # Find the specific coin
-            target_market = None
-            for market_data in markets_data:
-                if market_data.get('id') == coingecko_id:
-                    target_market = CoinGeckoMarket.from_coingecko_response(market_data)
-                    break
-            
-            if not target_market:
-                logger.warning(f"Project {coingecko_id} not found in markets data")
+            # Fetch coin data directly from CoinGecko
+            raw_details_with_market = self.client.get_coin_data(
+                coingecko_id,
+                market_data=True
+            )
+            if not raw_details_with_market:
+                logger.warning(f"Project {coingecko_id} not found in coin data")
                 return None
-            
+
+            market_data_from_details = raw_details_with_market.get('market_data', {})
+            market_data_for_model = {
+                'id': raw_details_with_market.get('id'),
+                'symbol': raw_details_with_market.get('symbol'),
+                'name': raw_details_with_market.get('name'),
+                'current_price': market_data_from_details.get('current_price', {}).get('usd'),
+                'market_cap': market_data_from_details.get('market_cap', {}).get('usd'),
+                'circulating_supply': market_data_from_details.get('circulating_supply'),
+                'total_supply': market_data_from_details.get('total_supply'),
+                # ... add any other required fields from the 'market_data' sub-object
+            }
+            target_market = CoinGeckoMarket.from_coingecko_response(market_data_for_model)
+            coin_details = CoinGeckoCoinDetails.from_coingecko_response(raw_details_with_market) if include_detailed_data else None
+
             # Validate market data
             if not ScoringValidator.validate_market_data_for_scoring(target_market):
                 logger.warning(f"Project {coingecko_id} failed validation")
                 return None
-            
-            # Fetch detailed data if requested
-            coin_details = None
-            if include_detailed_data:
-                try:
-                    coin_details = self._fetch_coin_details(coingecko_id)
-                except Exception as e:
-                    logger.warning(f"Failed to fetch details for {coingecko_id}: {e}")
-            
+
             # Process and return
             project_data = self._process_project(target_market, coin_details)
             logger.info(f"Successfully processed single project: {coingecko_id}")
             return project_data
-            
+
         except Exception as e:
             logger.error(f"Failed to fetch single project {coingecko_id}: {e}")
             return None

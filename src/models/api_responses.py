@@ -8,7 +8,7 @@ Handles response variations gracefully and provides structured data for the appl
 from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +218,7 @@ class CoinGeckoCoinDetails:
     categories: List[str]
     description: Optional[str] = None
     homepage: Optional[str] = None
-    blockchain_site: List[str] = None
+    blockchain_site: List[str] = field(default_factory=list)
     
     # Market data (from market_data object)
     market_cap_usd: Optional[float] = None
@@ -257,10 +257,9 @@ class CoinGeckoCoinDetails:
             
             # Links
             links = data.get('links', {})
-            homepage = None
-            if links and links.get('homepage'):
-                homepage = links['homepage'][0] if links['homepage'] else None
-            
+            homepage_list = links.get('homepage', [])  # Safely get list, default to []
+            homepage = homepage_list[0] if homepage_list else None  # Only access index if list is not empty
+
             blockchain_site = []
             if links and links.get('blockchain_site'):
                 blockchain_site = [site for site in links['blockchain_site'] if site]

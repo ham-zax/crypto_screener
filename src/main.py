@@ -323,7 +323,9 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
                 for key, value in updated_data.items():
                     if hasattr(project, key):
                         setattr(project, key, value)
-                project.update_all_scores()
+                from .services import project_service
+                project_service.update_all_scores(project)
+                APP.logger.info(f"[DEBUG] Updated all scores for project {project.id} in refresh_single_project")
                 DB.session.commit()
                 return jsonify({'message': 'Project refreshed successfully', 'project': project.to_dict()})
             else:
@@ -365,6 +367,50 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
     # @APP.route('/api/v2/projects/automated/<project_id>/csv', methods=['GET'])
     # @APP.route('/api/v2/projects/automated/<project_id>/csv', methods=['DELETE'])
 
+    @APP.route('/api/v2/projects/automated/<project_id>/csv', methods=['POST'])
+    def analyze_project_csv(project_id):
+        """
+        Analyze CSV data for a project, update its data score, and return the updated project.
+        """
+        if not DB or not CSV_ANALYZER:
+            return jsonify({'error': 'CSV analysis not available'}), 503
+
+        data = request.get_json() or {}
+        csv_text = data.get('csv_data')
+        if not csv_text:
+            return jsonify({'error': 'No CSV data provided'}), 400
+
+        from .models.automated_project import AutomatedProject, CSVData
+
+        project = AutomatedProject.query.get(project_id)
+        if not project:
+            return jsonify({'error': 'Project not found'}), 404
+
+        # Analyze CSV and create CSVData entry
+        try:
+            analysis_result = CSV_ANALYZER.analyze_csv_data(csv_text)
+            csv_data = CSVData(
+                project_id=project.id,
+                raw_data=csv_text,
+                processed_data=analysis_result.get('processed_data'),
+                data_score=analysis_result.get('data_score'),
+                analysis_metadata=analysis_result.get('analysis_metadata'),
+                validation_errors=analysis_result.get('validation_errors'),
+                is_valid=analysis_result.get('is_valid', False)
+            )
+            DB.session.add(csv_data)
+
+            # Update project with new data score
+            project.accumulation_signal = analysis_result.get('data_score')
+            from .services import project_service
+            project_service.update_all_scores(project)
+            APP.logger.info(f"[DEBUG] Updated all scores for project {project.id} in analyze_project_csv")
+            DB.session.commit()
+            return jsonify(project.to_dict()), 200
+        except Exception as e:
+            DB.session.rollback()
+            return jsonify({'error': 'CSV analysis failed', 'message': str(e)}), 500
+
 
 # --- V2 Task Management Endpoints ---
 @APP.route('/api/v2/tasks/fetch-projects', methods=['POST'])
@@ -383,10 +429,27 @@ def get_task_status():
     task_id = request.args.get('task_id')
     if task_id:
         status_info = TASK_MANAGER.get_task_status(task_id)
-        return jsonify({'task_status': status_info})
+        # Defensive: ensure everything is serializable
+        import json
+        def make_serializable(obj):
+            try:
+                json.dumps(obj)
+                return obj
+            except Exception:
+                return str(obj)
+        serializable_status_info = {k: make_serializable(v) for k, v in status_info.items()}
+        return jsonify({'task_status': serializable_status_info})
     else:
         all_statuses = TASK_MANAGER.get_all_task_statuses()
-        return jsonify({'all_tasks': all_statuses})
+        import json
+        def make_serializable(obj):
+            try:
+                json.dumps(obj)
+                return obj
+            except Exception:
+                return str(obj)
+        serializable_all_statuses = {k: make_serializable(v) for k, v in all_statuses.items()}
+        return jsonify({'all_tasks': serializable_all_statuses})
 @APP.route('/api/v2/tasks/history', methods=['GET'])
 def get_task_history():
     """Get the history of recently triggered tasks."""

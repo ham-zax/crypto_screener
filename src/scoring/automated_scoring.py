@@ -39,9 +39,8 @@ class AutomatedScoringEngine:
             Sector strength score (1-10 scale)
         """
         if not category:
-            logger.debug("No category provided, using default sector strength score")
-            return 4.0
-        
+            return 4.0  # Default score for projects with no category
+
         # Normalize category string
         normalized_category = category.lower().replace(' ', '-').replace('_', '-')
         
@@ -162,7 +161,7 @@ class AutomatedScoringEngine:
     
     @staticmethod
     def calculate_supply_risk(
-        circulating_supply: Optional[float], 
+        circulating_supply: Optional[float],
         total_supply: Optional[float]
     ) -> float:
         """
@@ -183,7 +182,9 @@ class AutomatedScoringEngine:
         Returns:
             Supply risk score (1-10 scale)
         """
-        if not circulating_supply or not total_supply or total_supply <= 0:
+        if not total_supply or total_supply == 0:
+            return 1.0  # Assign highest risk if supply data is invalid
+        if not circulating_supply or total_supply <= 0:
             logger.debug("Missing or invalid supply data, assigning highest risk score")
             return 1.0
         
@@ -335,7 +336,13 @@ class AutomatedScoringEngine:
             'scoring_metadata': {
                 'market_cap_usd': market_data.market_cap,
                 'circulation_ratio': market_data.get_circulation_ratio(),
-                'scored_at': logger.handlers[0].stream.name if logger.handlers else 'unknown',
+                'scored_at': (
+                    logger.handlers[0].stream.name
+                    if logger.handlers
+                    and isinstance(logger.handlers[0], logging.StreamHandler)
+                    and hasattr(logger.handlers[0].stream, "name")
+                    else 'unknown'
+                ),
                 'scoring_version': 'v2.0'
             }
         }

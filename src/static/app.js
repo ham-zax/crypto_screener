@@ -1,9 +1,11 @@
+(function() {
+    'use strict';
 /**
  * Project Omega V2 - Crypto Screening Application
  * Implements the Omega Protocol with hybrid localStorage/server persistence
  * Supports both manual projects (V1) and automated projects (V2)
  */
-
+ 
 class OmegaApp {
     constructor() {
         // V1 Properties
@@ -986,14 +988,21 @@ class OmegaApp {
 
         try {
             const result = await this.analyzeCSVData(projectId, csvText);
-            
-            // Display results
-            this.displayCSVAnalysisResults(result);
-            
-            // Refresh automated projects to show updated score
-            await this.loadAutomatedProjects();
-            
-            this.showSuccess('Data analysis completed successfully!');
+
+            if (result && result.data_score) {
+                // Find the index of the project to update
+                const projectIndex = this.automatedProjects.findIndex(p => p.id === projectId);
+                if (projectIndex !== -1) {
+                    // Update the project in the main list
+                    this.automatedProjects[projectIndex] = result;
+                }
+                // Re-apply filters and re-render the list
+                this.applyAutomatedFilters();
+                this.showSuccess('Data analysis completed successfully!');
+                this.closeCSVModal();
+            } else {
+                this.showError('Failed to analyze CSV data...');
+            }
         } catch (error) {
             console.error('CSV analysis failed:', error);
             this.showError('Failed to analyze CSV data. Please check the format and try again.');
@@ -1164,16 +1173,18 @@ class OmegaApp {
         const selectAllBtn = document.getElementById('selectAllBtn');
         const clearSelectionBtn = document.getElementById('clearSelectionBtn');
 
+        // Always hide the Bulk Analyze button
+        bulkAnalyzeBtn.style.display = 'none';
+
         const selectedCount = this.selectedProjects.size;
         const awaitingDataCount = this.filteredAutomatedProjects.filter(p => !p.has_data_score).length;
 
         selectionCount.textContent = `${selectedCount} selected`;
 
+        // The following logic is left intact for other controls, but bulkAnalyzeBtn will always be hidden
         if (selectedCount > 0) {
-            bulkAnalyzeBtn.style.display = 'inline-block';
             clearSelectionBtn.style.display = 'inline-block';
         } else {
-            bulkAnalyzeBtn.style.display = 'none';
             clearSelectionBtn.style.display = 'none';
         }
 
@@ -1302,5 +1313,6 @@ class OmegaApp {
         }, 5000);
     }
 }
-// Ensure OmegaApp is instantiated and globally accessible
-window.app = new OmegaApp();
+    // Ensure OmegaApp is instantiated and globally accessible
+    new OmegaApp();
+})();
