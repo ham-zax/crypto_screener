@@ -102,7 +102,7 @@ def create_celery_app(app_name='omega_v2_tasks'):
         # Error Handling
         task_reject_on_worker_lost=True,
         task_ignore_result=False,
-        result_expires=3600,  # 1 hour
+        result_expires=86400,  # 24 hours (increased from 1 hour to prevent premature expiry)
         
         # Task Annotations (retry policies)
         task_annotations=CELERY_TASK_ANNOTATIONS,
