@@ -1,3 +1,7 @@
+import sys
+import os
+# print("DEBUG sys.path:", sys.path)
+# print("DEBUG cwd:", os.getcwd())
 """
 Main Flask application file for Project Omega V2.
 
@@ -67,9 +71,9 @@ if V2_DEPENDENCIES_AVAILABLE:
     assert SQLAlchemy is not None and Migrate is not None
     try:
         # --- Database Setup ---
-        from .database.config import db_config, get_db_info
-        from .database.init_db import initialize_database, get_database_health
-        from .database import config as db_config_module
+        from src.database.config import db_config, get_db_info
+        from src.database.init_db import initialize_database, get_database_health
+        from src.database import config as db_config_module
 
         APP.config['SQLALCHEMY_DATABASE_URI'] = db_config.database_url
         APP.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -118,7 +122,7 @@ else:
 if V2_DEPENDENCIES_AVAILABLE:
     # API Services (Data Fetching)
     try:
-        from .api.data_fetcher import DataFetchingService, ProjectIngestionManager
+        from src.api.data_fetcher import DataFetchingService, ProjectIngestionManager
         DATA_FETCHER = DataFetchingService(api_key=os.getenv('COINGECKO_API_KEY'))
         INGESTION_MANAGER = ProjectIngestionManager(api_key=os.getenv('COINGECKO_API_KEY'))
         LOGGER.info("V2 API data fetching services initialized successfully.")
@@ -128,7 +132,7 @@ if V2_DEPENDENCIES_AVAILABLE:
 
     # CSV Analysis Services
     try:
-        from .scoring.csv_analyzer import CSVAnalyzer, CSVFormatValidator
+        from src.scoring.csv_analyzer import CSVAnalyzer, CSVFormatValidator
         CSV_ANALYZER = CSVAnalyzer
         CSV_FORMAT_VALIDATOR = CSVFormatValidator
         LOGGER.info("V2 CSV analysis services initialized successfully.")
@@ -138,22 +142,22 @@ if V2_DEPENDENCIES_AVAILABLE:
 
     # Task Management Services (with Fallback)
     try:
-        from .tasks.fallback import get_task_manager
-        from .tasks.scheduler import get_scheduler
-        from .tasks.celery_config import celery_app
+        from src.tasks.fallback import get_task_manager
+        from src.tasks.scheduler import get_scheduler
+        from src.tasks.celery_config import celery_app
         TASK_MANAGER = get_task_manager()
         SCHEDULER = get_scheduler(celery_app)
         LOGGER.info("Full task management services initialized successfully.")
     except Exception as e:
         LOGGER.warning(f"Task management services failed to initialize, using fallback: {e}")
-        from .tasks.fallback import fallback_task_manager
+        from src.tasks.fallback import fallback_task_manager
         TASK_MANAGER = fallback_task_manager
         SCHEDULER = None
 else:
     DATA_FETCHER, INGESTION_MANAGER = None, None
     CSV_ANALYZER, CSV_FORMAT_VALIDATOR = None, None
     try:
-        from .tasks.fallback import fallback_task_manager
+        from src.tasks.fallback import fallback_task_manager
         TASK_MANAGER = fallback_task_manager
         SCHEDULER = None
         LOGGER.info("V2 dependencies not available, using fallback task management.")
@@ -202,7 +206,7 @@ def health_check():
         health_status['status'] = 'v1_only'
         health_status['message'] = 'V2 dependencies not installed.'
     elif DB is not None:
-        from .database.config import get_db_info
+        from src.database.config import get_db_info
         health_status['database_info'] = get_db_info()
     return jsonify(health_status)
 
@@ -214,7 +218,7 @@ def database_health_check():
         return jsonify({'status': 'unavailable', 'message': 'V2 database not available'}), 503
 
     try:
-        from .database.init_db import get_database_health
+        from src.database.init_db import get_database_health
         health_data = get_database_health()
         status_code = 200 if health_data['status'] in ['healthy', 'degraded'] else 503
         return jsonify(health_data), status_code
@@ -231,8 +235,8 @@ def get_migration_status():
         return jsonify({'error': 'V2 database not available'}), 503
 
     try:
-        from .database.migrations.migration_runner import MigrationRunner
-        from .database.config import get_engine
+        from src.database.migrations.migration_runner import MigrationRunner
+        from src.database.config import get_engine
         runner = MigrationRunner(get_engine())
         return jsonify(runner.get_migration_status())
     except Exception as e:
@@ -247,8 +251,8 @@ def run_migrations():
         return jsonify({'error': 'V2 database not available'}), 503
 
     try:
-        from .database.migrations.migration_runner import MigrationRunner
-        from .database.config import get_engine
+        from src.database.migrations.migration_runner import MigrationRunner
+        from src.database.config import get_engine
         data = request.get_json() or {}
         target_version: str | None = data.get('target_version')
         runner = MigrationRunner(get_engine())
@@ -261,7 +265,7 @@ def run_migrations():
 
 # --- V2 API Endpoints for Automated Projects ---
 if V2_DEPENDENCIES_AVAILABLE and DB:
-    from .models.automated_project import AutomatedProject
+    from src.models.automated_project import AutomatedProject
 
     @APP.route('/api/v2/fetch-projects', methods=['POST'])
     def fetch_projects():
@@ -274,18 +278,73 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
 
     @APP.route('/api/v2/projects/automated', methods=['GET'])
     def get_automated_projects():
-        """Get list of automated projects with filtering and pagination."""
-        # ... [Full implementation] ...
+        """Get list of automated projects with server-side filtering and pagination."""
         try:
-           query = AutomatedProject.query
-           # Filtering and pagination logic here...
-           paginated = query.paginate(page=1, per_page=10, error_out=False)
-           projects = [p.to_dict() for p in paginated.items]
-           # --- THE FIX IS HERE ---
-           return jsonify({'data': projects, 'last_updated': datetime.utcnow().isoformat()})
+            query = AutomatedProject.query
+
+            # --- Filtering ---
+            category = request.args.get('category')
+            min_market_cap = request.args.get('min_market_cap', type=float)
+            max_market_cap = request.args.get('max_market_cap', type=float)
+            min_omega_score = request.args.get('min_omega_score', type=float)
+            max_omega_score = request.args.get('max_omega_score', type=float)
+            has_data_score = request.args.get('has_data_score')
+            search = request.args.get('search')
+
+            if category:
+                query = query.filter(AutomatedProject.category == category)
+            if min_market_cap is not None:
+                query = query.filter(AutomatedProject.market_cap >= min_market_cap)
+            if max_market_cap is not None:
+                query = query.filter(AutomatedProject.market_cap <= max_market_cap)
+            if min_omega_score is not None:
+                query = query.filter(AutomatedProject.omega_score >= min_omega_score)
+            if max_omega_score is not None:
+                query = query.filter(AutomatedProject.omega_score <= max_omega_score)
+            if has_data_score is not None:
+                if has_data_score.lower() == 'true':
+                    query = query.filter(AutomatedProject.has_data_score == True)
+                elif has_data_score.lower() == 'false':
+                    query = query.filter(AutomatedProject.has_data_score == False)
+            if search:
+                search_term = f"%{search.lower()}%"
+                query = query.filter(
+                    (AutomatedProject.name.ilike(search_term)) |
+                    (AutomatedProject.ticker.ilike(search_term))
+                )
+
+            # --- Sorting (Refactored for maintainability and security) ---
+            SORT_OPTIONS = {
+                'omega_score_desc': AutomatedProject.omega_score.desc().nullslast(),
+                'omega_score_asc': AutomatedProject.omega_score.asc().nullslast(),
+                'market_cap_desc': AutomatedProject.market_cap.desc().nullslast(),
+                'market_cap_asc': AutomatedProject.market_cap.asc().nullslast(),
+                'name_asc': AutomatedProject.name.asc(),
+            }
+            sort_by_key = request.args.get('sort_by', 'omega_score_desc')
+            if sort_by_key not in SORT_OPTIONS:
+                sort_by_key = 'omega_score_desc'
+            query = query.order_by(SORT_OPTIONS[sort_by_key])
+
+            # --- Pagination ---
+            page = request.args.get('page', 1, type=int)
+            per_page = request.args.get('per_page', 20, type=int)
+
+            paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+            projects = [p.to_dict() for p in paginated.items]
+            return jsonify({
+                'data': projects,
+                'pagination': {
+                    'page': paginated.page,
+                    'per_page': paginated.per_page,
+                    'total': paginated.total,
+                    'pages': paginated.pages
+                },
+                'last_updated': datetime.utcnow().isoformat()
+            })
         except Exception as e:
-           LOGGER.error(f"Failed to get automated projects: {e}")
-           return jsonify({'error': 'Query failed', 'message': str(e)}), 500
+            LOGGER.error(f"Failed to get automated projects: {e}")
+            return jsonify({'error': 'Query failed', 'message': str(e)}), 500
     
     # Add this function to src/main.py
 
@@ -323,7 +382,7 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
                 for key, value in updated_data.items():
                     if hasattr(project, key):
                         setattr(project, key, value)
-                from .services import project_service
+                from services import project_service
                 project_service.update_all_scores(project)
                 APP.logger.info(f"[DEBUG] Updated all scores for project {project.id} in refresh_single_project")
                 DB.session.commit()
@@ -352,7 +411,7 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
 
 # --- V2 CSV Analysis Endpoints ---
 if V2_DEPENDENCIES_AVAILABLE and DB:
-    from .models.automated_project import CSVData
+    from src.models.automated_project import CSVData
 
     @APP.route('/api/v2/csv/validate', methods=['POST'])
     def validate_csv():
@@ -380,7 +439,7 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
         if not csv_text:
             return jsonify({'error': 'No CSV data provided'}), 400
 
-        from .models.automated_project import AutomatedProject, CSVData
+        from models.automated_project import AutomatedProject, CSVData
 
         project = AutomatedProject.query.get(project_id)
         if not project:
@@ -402,7 +461,7 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
 
             # Update project with new data score
             project.accumulation_signal = analysis_result.get('data_score')
-            from .services import project_service
+            from services import project_service
             project_service.update_all_scores(project)
             APP.logger.info(f"[DEBUG] Updated all scores for project {project.id} in analyze_project_csv")
             DB.session.commit()

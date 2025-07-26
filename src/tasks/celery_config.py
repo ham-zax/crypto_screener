@@ -259,5 +259,4 @@ def test_redis_connection():
 # Create the default Celery app instance
 celery_app = create_celery_app()
 
-# Auto-discover tasks from tasks module
-celery_app.autodiscover_tasks(['src.tasks'])
+# celery_app.autodiscover_tasks(['src.tasks'])

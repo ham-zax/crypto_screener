@@ -26,6 +26,153 @@ from .celery_config import celery_app
 logger = logging.getLogger(__name__)
 
 # Task Decorators and Configuration
+def _core_fetch_and_save_logic(filters: dict, save_to_database: bool, batch_size: int) -> dict:
+    """
+    Core business logic for fetching and saving cryptocurrency projects.
+    This function is independent of Celery and can be called directly.
+    """
+    import os
+    import logging
+    from datetime import datetime
+    from src.api.data_fetcher import ProjectIngestionManager
+    from src.models.automated_project import AutomatedProject
+    from src.database.config import db_config
+
+    logger = logging.getLogger(__name__)
+    start_time = datetime.utcnow()
+
+    # Check if V2 dependencies are available
+    from src.tasks.scheduled_tasks import _check_v2_dependencies
+    if not _check_v2_dependencies():
+        error_msg = "V2 dependencies not available for task execution"
+        logger.error(error_msg)
+        return {
+            'status': 'failed',
+            'error': error_msg,
+            'duration': 0
+        }
+
+    # Initialize services
+    api_key = os.getenv('COINGECKO_API_KEY')
+    ingestion_manager = ProjectIngestionManager(api_key=api_key)
+
+    # Apply default filters if none provided
+    if filters is None:
+        filters = {
+            'min_market_cap': 1_000_000,
+            'max_results': 1000,
+            'min_volume_24h': 100_000
+        }
+
+    logger.info(f"Fetching projects with filters: {filters}")
+
+    # Run full ingestion
+    result = ingestion_manager.run_full_ingestion(
+        filters=filters,
+        task_id=None,
+        batch_size=batch_size
+    )
+    projects = result['projects']
+    ingestion_record = result['ingestion_record']
+
+    logger.info(f"Fetched {len(projects)} projects")
+
+    # Save to database if requested and available
+    saved_count = 0
+    updated_count = 0
+
+    if save_to_database and len(projects) > 0:
+        logger.info("Saving projects to database...")
+
+        # Process projects in batches
+        session = db_config.get_session()
+        try:
+            # --- BEGIN N+1 ELIMINATION ---
+            # Gather all coingecko_ids from all projects
+            project_ids_from_api = [p['coingecko_id'] for p in projects if p.get('coingecko_id')]
+            # Fetch all existing projects in one query
+            existing_projects_query = session.query(AutomatedProject).filter(
+                AutomatedProject.coingecko_id.in_(project_ids_from_api)
+            )
+            # Build a map for fast lookup
+            existing_projects_map = {p.coingecko_id: p for p in existing_projects_query}
+            # --- END N+1 ELIMINATION ---
+            for i in range(0, len(projects), batch_size):
+                batch = projects[i:i + batch_size]
+
+                for project_data in batch:
+                    try:
+                        # Log each coin being processed
+                        logger.info(
+                            f"Processing coin: coingecko_id={project_data.get('coingecko_id', 'unknown')}, "
+                            f"name={project_data.get('name', 'unknown')}, "
+                            f"symbol={project_data.get('symbol', 'unknown')}"
+                        )
+                        # Use map lookup instead of per-project query
+                        existing = existing_projects_map.get(project_data.get('coingecko_id'))
+
+                        if existing:
+                            # Update existing project (preserve data score)
+                            old_data_score = existing.data_score
+                            old_accumulation_signal = existing.accumulation_signal
+                            old_has_data_score = existing.has_data_score
+
+                            for key, value in project_data.items():
+                                if hasattr(existing, key) and key not in ['id', 'data_score', 'accumulation_signal', 'has_data_score']:
+                                    setattr(existing, key, value)
+
+                            # Restore data score components
+                            existing.data_score = old_data_score
+                            existing.accumulation_signal = old_accumulation_signal
+                            existing.has_data_score = old_has_data_score
+
+                            from src.services import project_service
+                            project_service.update_all_scores(existing)
+                            logger.info(f"[DEBUG] Updated all scores for existing project {existing.id} in fetch_and_update_projects")
+                            updated_count += 1
+                        else:
+                            # Create new project
+                            new_project = AutomatedProject(**project_data)
+                            from src.services import project_service
+                            project_service.update_all_scores(new_project)
+                            logger.info(f"[DEBUG] Updated all scores for new project {getattr(new_project, 'id', 'unknown')} in fetch_and_update_projects")
+                            session.add(new_project)
+                            saved_count += 1
+
+                    except Exception as e:
+                        logger.error(f"Failed to save project {project_data.get('coingecko_id', 'unknown')}: {e}")
+                        continue
+
+                # Commit batch
+                session.commit()
+
+            logger.info(f"Database update completed: {saved_count} new, {updated_count} updated")
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Database batch operation failed: {e}")
+            raise
+        finally:
+            session.close()
+
+    # Calculate duration
+    duration = (datetime.utcnow() - start_time).total_seconds()
+
+    # Return success result
+    result = {
+        'status': 'success',
+        'projects_fetched': len(projects),
+        'projects_saved': saved_count,
+        'projects_updated': updated_count,
+        'duration': round(duration, 2),
+        'ingestion_record': ingestion_record,
+        'filters_applied': filters,
+        'completed_at': datetime.utcnow().isoformat()
+    }
+
+    logger.info(f"Core logic completed successfully in {duration:.1f}s")
+    return result
+
 @celery_app.task(bind=True, name='src.tasks.scheduled_tasks.fetch_and_update_projects')
 def fetch_and_update_projects(
     self,
@@ -34,190 +181,61 @@ def fetch_and_update_projects(
     batch_size: int = 250
 ):
     """
-    Scheduled task to fetch and update cryptocurrency projects
-    
-    Args:
-        filters: Project filtering criteria
-        save_to_database: Whether to save results to database
-        batch_size: Number of projects to process per batch
-        
-    Returns:
-        Task execution results
+    Scheduled task to fetch and update cryptocurrency projects (Celery wrapper)
     """
     task_id = self.request.id
     logger.info(f"Starting fetch_and_update_projects task {task_id}")
-    
+
     start_time = datetime.utcnow()
-    
+
     try:
-        # Check if V2 dependencies are available
-        if not _check_v2_dependencies():
-            error_msg = "V2 dependencies not available for task execution"
-            logger.error(error_msg)
-            return {
-                'status': 'failed',
-                'error': error_msg,
-                'task_id': task_id,
-                'duration': 0
-            }
-        
-        # Import V2 services
-        from ..api.data_fetcher import ProjectIngestionManager
-        from ..models.automated_project import AutomatedProject
-        from ..database.config import db_config
-        
-        # Initialize services
-        api_key = os.getenv('COINGECKO_API_KEY')
-        ingestion_manager = ProjectIngestionManager(api_key=api_key)
-        
-        # Apply default filters if none provided
-        if filters is None:
-            filters = {
-                'min_market_cap': 1_000_000,
-                'max_results': 1000,
-                'min_volume_24h': 100_000
-            }
-        
-        logger.info(f"Fetching projects with filters: {filters}")
-        
-        # Update task state
+        # Update task state: fetching
+        effective_filters = filters if filters is not None else {
+            'min_market_cap': 1_000_000,
+            'max_results': 1000,
+            'min_volume_24h': 100_000
+        }
         self.update_state(
             state='PROGRESS',
             meta={
                 'current': 0,
-                'total': filters.get('max_results', 1000),
+                'total': effective_filters.get('max_results', 1000),
                 'status': 'Fetching market data...'
             }
         )
-        
-        # Run full ingestion with task progress tracking
-        result = ingestion_manager.run_full_ingestion(
-            filters=filters,
-            task_id=task_id,
-            batch_size=batch_size
+
+        # Call core business logic
+        result = _core_fetch_and_save_logic(
+            filters if filters is not None else {
+                'min_market_cap': 1_000_000,
+                'max_results': 1000,
+                'min_volume_24h': 100_000
+            },
+            save_to_database,
+            batch_size
         )
-        projects = result['projects']
-        ingestion_record = result['ingestion_record']
-        
-        logger.info(f"Fetched {len(projects)} projects")
-        
-        # Save to database if requested and available
-        saved_count = 0
-        updated_count = 0
-        
-        if save_to_database and len(projects) > 0:
-            logger.info("Saving projects to database...")
-            
-            # Process projects in batches
-            session = db_config.get_session()
-            try:
-                # --- BEGIN N+1 ELIMINATION ---
-                # Gather all coingecko_ids from all projects
-                project_ids_from_api = [p['coingecko_id'] for p in projects if p.get('coingecko_id')]
-                # Fetch all existing projects in one query
-                existing_projects_query = session.query(AutomatedProject).filter(
-                    AutomatedProject.coingecko_id.in_(project_ids_from_api)
-                )
-                # Build a map for fast lookup
-                existing_projects_map = {p.coingecko_id: p for p in existing_projects_query}
-                # --- END N+1 ELIMINATION ---
-                for i in range(0, len(projects), batch_size):
-                    batch = projects[i:i + batch_size]
-                    
-                    # Update task progress
-                    self.update_state(
-                        state='PROGRESS',
-                        meta={
-                            'current': min(i + batch_size, len(projects)),
-                            'total': len(projects),
-                            'status': f'Saving batch {i//batch_size + 1}...'
-                        }
-                    )
-                    
-                    for project_data in batch:
-                        try:
-                            # Log each coin being processed
-                            logger.info(
-                                f"Processing coin: coingecko_id={project_data.get('coingecko_id', 'unknown')}, "
-                                f"name={project_data.get('name', 'unknown')}, "
-                                f"symbol={project_data.get('symbol', 'unknown')}"
-                            )
-                            # Use map lookup instead of per-project query
-                            existing = existing_projects_map.get(project_data.get('coingecko_id'))
-                            
-                            if existing:
-                                # Update existing project (preserve data score)
-                                old_data_score = existing.data_score
-                                old_accumulation_signal = existing.accumulation_signal
-                                old_has_data_score = existing.has_data_score
-                                
-                                for key, value in project_data.items():
-                                    if hasattr(existing, key) and key not in ['id', 'data_score', 'accumulation_signal', 'has_data_score']:
-                                        setattr(existing, key, value)
-                                
-                                # Restore data score components
-                                existing.data_score = old_data_score
-                                existing.accumulation_signal = old_accumulation_signal
-                                existing.has_data_score = old_has_data_score
-                                
-                                from ..services import project_service
-                                project_service.update_all_scores(existing)
-                                logger.info(f"[DEBUG] Updated all scores for existing project {existing.id} in fetch_and_update_projects")
-                                updated_count += 1
-                            else:
-                                # Create new project
-                                new_project = AutomatedProject(**project_data)
-                                from ..services import project_service
-                                project_service.update_all_scores(new_project)
-                                logger.info(f"[DEBUG] Updated all scores for new project {getattr(new_project, 'id', 'unknown')} in fetch_and_update_projects")
-                                session.add(new_project)
-                                saved_count += 1
-                        
-                        except Exception as e:
-                            logger.error(f"Failed to save project {project_data.get('coingecko_id', 'unknown')}: {e}")
-                            continue
-                    
-                    # Commit batch
-                    session.commit()
-                
-                logger.info(f"Database update completed: {saved_count} new, {updated_count} updated")
-                
-            except Exception as e:
-                session.rollback()
-                logger.error(f"Database batch operation failed: {e}")
-                raise
-            finally:
-                session.close()
-        
-        # Calculate duration
+
+        # If saving, update progress after each batch is not possible here (handled in core logic)
         duration = (datetime.utcnow() - start_time).total_seconds()
-        
-        # Return success result
-        result = {
-            'status': 'success',
-            'task_id': task_id,
-            'projects_fetched': len(projects),
-            'projects_saved': saved_count,
-            'projects_updated': updated_count,
-            'duration': round(duration, 2),
-            'ingestion_record': ingestion_record,
-            'filters_applied': filters,
-            'completed_at': datetime.utcnow().isoformat()
-        }
-        
+
+        # Attach task_id and duration to result
+        result['task_id'] = task_id
+        result['duration'] = round(duration, 2)
+        result['completed_at'] = datetime.utcnow().isoformat()
+
         logger.info(f"Task {task_id} completed successfully in {duration:.1f}s")
         return result
-        
+
     except Exception as e:
         duration = (datetime.utcnow() - start_time).total_seconds()
         error_msg = f"Task failed: {str(e)}"
         logger.error(f"Task {task_id} failed: {e}")
-        
+
         # Retry logic
         if self.request.retries < self.max_retries:
             logger.info(f"Retrying task {task_id} (attempt {self.request.retries + 1})")
             raise self.retry(countdown=60 * (2 ** self.request.retries), exc=e)
-        
+
         return {
             'status': 'failed',
             'task_id': task_id,

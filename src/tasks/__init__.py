@@ -1,6 +1,4 @@
-"""
-V2 Background Tasks
-This package contains Celery tasks for automated data fetching and processing.
-"""
+from .celery_config import celery_app
+from . import scheduled_tasks
 
-__version__ = "2.0.0"
+__all__ = ('celery_app', 'scheduled_tasks')
