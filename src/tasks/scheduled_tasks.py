@@ -12,12 +12,16 @@ Implements Celery tasks for:
 import os
 import logging
 from datetime import datetime, timedelta
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s %(name)s: %(message)s'
+)
 from typing import Dict, Any, Optional, List
 from celery import current_task
 from celery.exceptions import Retry
 
 # Import Celery app
-from .celery_config import celery_app
+from .celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +126,12 @@ def fetch_and_update_projects(
                     
                     for project_data in batch:
                         try:
+                            # Log each coin being processed
+                            logger.info(
+                                f"Processing coin: coingecko_id={project_data.get('coingecko_id', 'unknown')}, "
+                                f"name={project_data.get('name', 'unknown')}, "
+                                f"symbol={project_data.get('symbol', 'unknown')}"
+                            )
                             # Check if project exists
                             existing = session.query(AutomatedProject).filter_by(
                                 coingecko_id=project_data['coingecko_id']
@@ -351,7 +361,8 @@ def health_check_task(self):
             try:
                 from ..database.config import db_config
                 session = db_config.get_session()
-                session.execute('SELECT 1')
+                from sqlalchemy import text
+                session.execute(text('SELECT 1'))
                 session.close()
                 
                 health_status['components']['database'] = {

@@ -8,7 +8,7 @@ Based on V2 specification requirements for automated project ingestion.
 import requests
 import time
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import json
 
 logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ class CoinGeckoClient:
         """Check if cached data is still valid"""
         return time.time() - timestamp < self.cache_ttl
     
-    def _make_request(self, endpoint: str, params: Optional[Dict] = None) -> Dict:
+    def _make_request(self, endpoint: str, params: Optional[Dict] = None) -> Any:
         """
         Make HTTP request with rate limiting, caching, and retry logic
         
@@ -155,6 +155,9 @@ class CoinGeckoClient:
                 
                 # Parse response
                 data = response.json()
+                
+                # Log the full API response
+                logger.info(f"CoinGecko API response for {endpoint}: {json.dumps(data)[:1000]}")  # Truncate to 1000 chars
                 
                 # Cache successful response
                 self.cache[cache_key] = (data, time.time())
@@ -305,11 +308,9 @@ class CoinGeckoClient:
             
             response = self._make_request("coins/markets", params)
             
-            # Extract market data list from response
-            market_data = response.get('market_data', [])
-            
-            logger.info(f"Fetched {len(market_data)} market entries (page {page})")
-            return market_data
+            # The API returns a list directly
+            logger.info(f"Fetched {len(response)} market entries (page {page})")
+            return response
             
         except Exception as e:
             logger.error(f"Failed to fetch markets data: {e}")
