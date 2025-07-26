@@ -74,7 +74,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
-
+celery_schedules.json
 # Documentation builds
 docs/_build/
 
@@ -97,3 +97,5 @@ yarn-error.log*
 api_keys.txt
 secrets.txt
 config/secrets.json
+# Ignore Celery schedule file
+data/celery_schedules.json

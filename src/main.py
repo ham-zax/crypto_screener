@@ -105,6 +105,12 @@ if V2_DEPENDENCIES_AVAILABLE:
 
             LOGGER.info(f"📊 Final Database status: {get_db_info()}")
 
+        # Explicitly log DB status after initialization
+        if DB is not None:
+            LOGGER.info("[DEBUG] DB object initialized and available.")
+        else:
+            LOGGER.error("[DEBUG] DB object is None after initialization!")
+
     except ImportError as e:
         LOGGER.warning(f"V2 backend modules not available: {e}. Running in V1 compatibility mode only.")
         DB = None
@@ -142,10 +148,14 @@ if V2_DEPENDENCIES_AVAILABLE:
     # CSV Analysis Services
     try:
         from src.services.csv_analyzer import CSVAnalyzer
+        LOGGER.info("[DEBUG] Attempting to initialize CSVAnalyzer...")
         CSV_ANALYZER = CSVAnalyzer()
-        LOGGER.info("V2 CSV analysis services initialized successfully.")
+        LOGGER.info("V2 CSV analysis services initialized successfully. CSV_ANALYZER is ready.")
     except Exception as e:
-        LOGGER.warning(f"V2 CSV analysis services failed to initialize: {e}")
+        LOGGER.error("!!!!!!!! FAILED TO INITIALIZE CSV_ANALYZER !!!!!!!!")
+        LOGGER.error(f"The root cause is: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc() # This is the key: it prints the full error path
         CSV_ANALYZER = None
 
     # Task Management Services (with Fallback)
