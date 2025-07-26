@@ -12,6 +12,8 @@ Run this script to verify Phase 2 implementation.
 
 import sys
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import logging
 import time
 from typing import Dict, Any

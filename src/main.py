@@ -1,5 +1,3 @@
-import sys
-import os
 # print("DEBUG sys.path:", sys.path)
 # print("DEBUG cwd:", os.getcwd())
 """
@@ -20,7 +18,8 @@ import os
 import logging
 import time
 from datetime import datetime
-
+from dotenv import load_dotenv
+load_dotenv()
 # --- Third-Party Imports ---
 from flask import Flask, send_from_directory, jsonify, request
 
@@ -123,8 +122,18 @@ if V2_DEPENDENCIES_AVAILABLE:
     # API Services (Data Fetching)
     try:
         from src.api.data_fetcher import DataFetchingService, ProjectIngestionManager
-        DATA_FETCHER = DataFetchingService(api_key=os.getenv('COINGECKO_API_KEY'))
-        INGESTION_MANAGER = ProjectIngestionManager(api_key=os.getenv('COINGECKO_API_KEY'))
+        
+        # DEBUG: Log environment variable loading
+        coingecko_api_key = os.getenv('COINGECKO_API_KEY')
+        LOGGER.info(f"[DEBUG] COINGECKO_API_KEY loaded: {coingecko_api_key is not None}")
+        if coingecko_api_key:
+            LOGGER.info(f"[DEBUG] COINGECKO_API_KEY length: {len(coingecko_api_key)}")
+            LOGGER.info(f"[DEBUG] COINGECKO_API_KEY prefix: {coingecko_api_key[:10]}...")
+        else:
+            LOGGER.warning("[DEBUG] COINGECKO_API_KEY is None or empty!")
+        
+        DATA_FETCHER = DataFetchingService(api_key=coingecko_api_key)
+        INGESTION_MANAGER = ProjectIngestionManager(api_key=coingecko_api_key)
         LOGGER.info("V2 API data fetching services initialized successfully.")
     except Exception as e:
         LOGGER.warning(f"V2 API data fetching services failed to initialize: {e}")

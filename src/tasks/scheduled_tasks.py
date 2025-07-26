@@ -10,6 +10,8 @@ Implements Celery tasks for:
 """
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import logging
 from datetime import datetime, timedelta
 logging.basicConfig(
@@ -54,6 +56,15 @@ def _core_fetch_and_save_logic(filters: dict, save_to_database: bool, batch_size
 
     # Initialize services
     api_key = os.getenv('COINGECKO_API_KEY')
+    
+    # DEBUG: Log API key information in task context
+    logger.info(f"[DEBUG] Task context - COINGECKO_API_KEY loaded: {api_key is not None}")
+    if api_key:
+        logger.info(f"[DEBUG] Task context - COINGECKO_API_KEY length: {len(api_key)}")
+        logger.info(f"[DEBUG] Task context - COINGECKO_API_KEY prefix: {api_key[:10]}...")
+    else:
+        logger.warning("[DEBUG] Task context - COINGECKO_API_KEY is None or empty!")
+    
     ingestion_manager = ProjectIngestionManager(api_key=api_key)
 
     # Apply default filters if none provided
@@ -416,12 +427,12 @@ def health_check_task(self):
             meta={'status': 'Checking API services...'}
         )
         
+        # CoinGecko API health check
         try:
             from ..api.coingecko import CoinGeckoClient
-            client = CoinGeckoClient()
-            # Simple ping test
-            client.get_markets_data(per_page=1, page=1)
-            
+            cg_api_key = os.getenv('COINGECKO_API_KEY')
+            cg_client = CoinGeckoClient(api_key=cg_api_key)
+            cg_client.get_markets_data(per_page=1, page=1)
             health_status['components']['coingecko_api'] = {
                 'status': 'healthy',
                 'details': 'CoinGecko API accessible'
@@ -430,6 +441,22 @@ def health_check_task(self):
             health_status['components']['coingecko_api'] = {
                 'status': 'degraded',
                 'details': f'CoinGecko API issues: {e}'
+            }
+
+        # CoinMarketCap API health check
+        try:
+            from ..api.coinmarketcap import CoinMarketCapClient
+            cmc_api_key = os.getenv('COINMARKETCAP_API_KEY')
+            cmc_client = CoinMarketCapClient(api_key=cmc_api_key)
+            cmc_client.get_listings_latest(limit=1)
+            health_status['components']['coinmarketcap_api'] = {
+                'status': 'healthy',
+                'details': 'CoinMarketCap API accessible'
+            }
+        except Exception as e:
+            health_status['components']['coinmarketcap_api'] = {
+                'status': 'degraded',
+                'details': f'CoinMarketCap API issues: {e}'
             }
         
         # Overall health determination

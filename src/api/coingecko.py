@@ -43,12 +43,33 @@ class CoinGeckoClient:
         self.base_url = "https://api.coingecko.com/api/v3"
         self.session = requests.Session()
         
+        # DEBUG: Log API key information
+        logger.info(f"[DEBUG] CoinGecko API Key provided: {api_key is not None}")
+        if api_key:
+            logger.info(f"[DEBUG] CoinGecko API Key length: {len(api_key)}")
+            logger.info(f"[DEBUG] CoinGecko API Key prefix: {api_key[:10]}...")
+        else:
+            logger.warning("[DEBUG] No CoinGecko API Key provided - using free tier")
+        
         # Set up authentication if API key provided
         if api_key:
-            self.session.headers.update({"x-cg-pro-api-key": api_key})
-            self.calls_per_minute = 500  # Pro tier limit
+            # Check if this is a Demo API key (starts with CG-) or Pro API key
+            if api_key.startswith('CG-'):
+                # Demo API key - use demo authentication header
+                self.session.headers.update({"x-cg-demo-api-key": api_key})
+                self.calls_per_minute = 30  # Demo tier limit (30 calls/minute)
+                self.api_tier = "demo"
+                logger.info("[DEBUG] CoinGecko Demo API authentication configured (30 calls/minute)")
+            else:
+                # Pro API key - use pro authentication header
+                self.session.headers.update({"x-cg-pro-api-key": api_key})
+                self.calls_per_minute = 500  # Pro tier limit
+                self.api_tier = "pro"
+                logger.info("[DEBUG] CoinGecko Pro API authentication configured (500 calls/minute)")
         else:
-            self.calls_per_minute = 30   # Free tier limit
+            self.calls_per_minute = 30   # Free tier limit (no authentication)
+            self.api_tier = "free"
+            logger.info("[DEBUG] CoinGecko Free tier configured (30 calls/minute)")
         
         # Rate limiting tracking
         self.call_timestamps = []
@@ -140,7 +161,10 @@ class CoinGeckoClient:
                 self._enforce_rate_limit()
                 
                 # Make request
-                logger.debug(f"Making request to {endpoint} (attempt {attempt + 1})")
+                logger.info(f"[DEBUG] Making CoinGecko API request to {endpoint} (attempt {attempt + 1})")
+                logger.info(f"[DEBUG] Request URL: {url}")
+                logger.info(f"[DEBUG] Request params: {params}")
+                logger.info(f"[DEBUG] Request headers: {dict(self.session.headers)}")
                 response = self.session.get(url, params=params, timeout=30)
                 
                 # Handle HTTP errors

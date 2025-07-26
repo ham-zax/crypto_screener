@@ -77,6 +77,14 @@ class DataFetchingService:
         Args:
             api_key: Optional CoinGecko Pro API key
         """
+        # DEBUG: Log API key information
+        logger.info(f"[DEBUG] DataFetchingService API Key provided: {api_key is not None}")
+        if api_key:
+            logger.info(f"[DEBUG] DataFetchingService API Key length: {len(api_key)}")
+            logger.info(f"[DEBUG] DataFetchingService API Key prefix: {api_key[:10]}...")
+        else:
+            logger.warning("[DEBUG] DataFetchingService: No API Key provided!")
+        
         self.client = CoinGeckoClient(api_key=api_key)
         self.scoring_engine = AutomatedScoringEngine()
         self.validator = APIResponseValidator()
