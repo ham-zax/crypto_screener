@@ -17,7 +17,8 @@ from ..models.api_responses import (
     CoinGeckoCoinDetails, 
     APIResponseValidator
 )
-from ..scoring.automated_scoring import AutomatedScoringEngine, ScoringValidator
+from src.services.scoring_engine import ScoringEngine
+from ..scoring.automated_scoring import ScoringValidator
 
 logger = logging.getLogger(__name__)
 
@@ -84,11 +85,11 @@ class DataFetchingService:
             logger.info(f"[DEBUG] DataFetchingService API Key prefix: {api_key[:10]}...")
         else:
             logger.warning("[DEBUG] DataFetchingService: No API Key provided!")
-        
+
         self.client = CoinGeckoClient(api_key=api_key)
-        self.scoring_engine = AutomatedScoringEngine()
+        self.scoring_engine = ScoringEngine()
         self.validator = APIResponseValidator()
-        
+
         # Default filtering criteria
         self.default_filters = {
             'min_market_cap': 1_000_000,      # $1M minimum
@@ -96,7 +97,7 @@ class DataFetchingService:
             'min_volume_24h': 100_000,        # $100K minimum daily volume
             'max_results': 1000               # Limit to top 1000 projects
         }
-        
+
         logger.info("Data fetching service initialized")
     
     def fetch_projects_bulk(

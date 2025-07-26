@@ -1,0 +1,52 @@
+# Project Omega v2 Scoring Configuration
+# This file is the source of truth for all automated scoring parameters.
+# It is designed to be easily updated by an analyst without changing code.
+
+scoring:
+  # Parameters for AS-01: Narrative Score
+  narrative:
+    # AS-01a: Sector Strength based on CoinGecko category
+    sector_strength_map:
+      # Top Tier: Score 9
+      ai: 9
+      depin: 9
+      rwa: 9
+      # Mid Tier: Score 7
+      l1: 7
+      l2: 7
+      gamefi: 7
+      infrastructure: 7
+      # Default score for all other categories
+      default_score: 4
+
+    # AS-01b & AS-01c: Default neutral scores for qualitative metrics
+    backing_team_default: 5.0
+    value_proposition_default: 5.0
+
+  # Parameters for AS-02: Tokenomics Score
+  tokenomics:
+    # AS-02a: Valuation Potential based on market cap tiers
+    valuation_potential_tiers:
+      - { max_market_cap: 20000000, score: 10.0 }    # < $20M
+      - { max_market_cap: 50000000, score: 9.0 }     # < $50M
+      - { max_market_cap: 100000000, score: 8.0 }    # < $100M
+      - { max_market_cap: 200000000, score: 7.0 }    # < $200M
+      - { max_market_cap: 500000000, score: 5.0 }    # < $500M
+      - { max_market_cap: 1000000000, score: 3.0 }   # < $1B
+      - { max_market_cap: .inf, score: 1.0 }         # >= $1B
+
+    # AS-02b: Default neutral score
+    token_utility_default: 5.0
+
+    # AS-02c: Supply Risk based on circulation ratio
+    supply_risk_tiers:
+      - { min_ratio: 0.9, score: 10.0 }  # >= 90%
+      - { min_ratio: 0.75, score: 9.0 }  # >= 75%
+      - { min_ratio: 0.50, score: 7.0 }  # >= 50%
+      - { min_ratio: 0.25, score: 5.0 }  # >= 25%
+      - { min_ratio: 0.10, score: 2.0 }  # >= 10%
+      - { min_ratio: 0.0, score: 1.0 }   # < 10% or unavailable
+
+# Parameters for AS-03: Data Score (from user-pasted data)
+data_score_rules:
+  min_periods: 90 # BR-09 & AS-03b: Minimum data points required
