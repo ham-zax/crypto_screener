@@ -141,13 +141,12 @@ if V2_DEPENDENCIES_AVAILABLE:
 
     # CSV Analysis Services
     try:
-        from src.scoring.csv_analyzer import CSVAnalyzer, CSVFormatValidator
-        CSV_ANALYZER = CSVAnalyzer
-        CSV_FORMAT_VALIDATOR = CSVFormatValidator
+        from src.services.csv_analyzer import CSVAnalyzer
+        CSV_ANALYZER = CSVAnalyzer()
         LOGGER.info("V2 CSV analysis services initialized successfully.")
     except Exception as e:
         LOGGER.warning(f"V2 CSV analysis services failed to initialize: {e}")
-        CSV_ANALYZER, CSV_FORMAT_VALIDATOR = None, None
+        CSV_ANALYZER = None
 
     # Task Management Services (with Fallback)
     try:
@@ -435,49 +434,63 @@ if V2_DEPENDENCIES_AVAILABLE and DB:
     # @APP.route('/api/v2/projects/automated/<project_id>/csv', methods=['GET'])
     # @APP.route('/api/v2/projects/automated/<project_id>/csv', methods=['DELETE'])
 
+
     @APP.route('/api/v2/projects/automated/<project_id>/csv', methods=['POST'])
     def analyze_project_csv(project_id):
         """
-        Analyze CSV data for a project, update its data score, and return the updated project.
+        Analyzes user-pasted CSV data for a specific project.
+        On success, it calculates the Data Score, updates the final Omega Score,
+        and saves the changes to the database.
         """
+        from src.models.automated_project import AutomatedProject
         if not DB or not CSV_ANALYZER:
             return jsonify({'error': 'CSV analysis not available'}), 503
 
-        data = request.get_json() or {}
-        csv_text = data.get('csv_data')
-        if not csv_text:
-            return jsonify({'error': 'No CSV data provided'}), 400
+        # Step 1: Find the project in the database.
+        project = AutomatedProject.query.get_or_404(project_id)
 
-        from models.automated_project import AutomatedProject, CSVData
+        # Step 2: Get the raw CSV text from the request body.
+        data = request.get_json()
+        if not data or 'csv_data' not in data:
+            return jsonify({"error": "Request body must be JSON and contain a 'csv_data' key."}), 400
 
-        project = AutomatedProject.query.get(project_id)
-        if not project:
-            return jsonify({'error': 'Project not found'}), 404
+        csv_text = data['csv_data']
 
-        # Analyze CSV and create CSVData entry
+        # Step 3: Delegate to our robust CSVAnalyzer service.
+        analysis_result = CSV_ANALYZER.analyze(csv_text)
+
+        # Step 4: Handle analysis failure, returning a clear error to the user.
+        if not analysis_result.get('success'):
+            error_message = analysis_result.get('error', 'Analysis failed due to an unknown error.')
+            return jsonify({"error": error_message}), 400
+
+        # Step 5: Handle analysis success: Update the project and save it.
         try:
-            analysis_result = CSV_ANALYZER.analyze_csv_data(csv_text)
-            csv_data = CSVData(
-                project_id=project.id,
-                raw_data=csv_text,
-                processed_data=analysis_result.get('processed_data'),
-                data_score=analysis_result.get('data_score'),
-                analysis_metadata=analysis_result.get('analysis_metadata'),
-                validation_errors=analysis_result.get('validation_errors'),
-                is_valid=analysis_result.get('is_valid', False)
-            )
-            DB.session.add(csv_data)
+            # Update the project object with the results from the analysis.
+            project.data_score = analysis_result['data_score']
+            project.accumulation_signal = analysis_result.get('accumulation_signal')
+            project.has_data_score = True
 
-            # Update project with new data score
-            project.accumulation_signal = analysis_result.get('data_score')
-            from services import project_service
-            project_service.update_all_scores(project)
-            APP.logger.info(f"[DEBUG] Updated all scores for project {project.id} in analyze_project_csv")
+            # Per AS-05, calculate the final Omega Score NOW that the Data Score exists.
+            if project.narrative_score is not None and project.tokenomics_score is not None and project.data_score is not None:
+                project.omega_score = (
+                    project.narrative_score +
+                    project.tokenomics_score +
+                    project.data_score
+                ) / 3.0
+            else:
+                project.omega_score = None
+
+            # Commit the changes to the database.
             DB.session.commit()
+
+            # Return the fully updated project data with a 200 OK status.
             return jsonify(project.to_dict()), 200
+
         except Exception as e:
             DB.session.rollback()
-            return jsonify({'error': 'CSV analysis failed', 'message': str(e)}), 500
+            LOGGER.error(f"Database error while updating project {project_id} with data score: {e}")
+            return jsonify({"error": "An internal server error occurred while saving the results."}), 500
 
 
 # --- V2 Task Management Endpoints ---
