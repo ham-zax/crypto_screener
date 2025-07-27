@@ -11,27 +11,31 @@ import logging
 from typing import List, Dict, Optional, Any
 import json
 from dotenv import load_dotenv
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
 class RateLimitError(Exception):
     pass
+
 
 class APIError(Exception):
     pass
 
+
 class CoinMarketCapClient:
     """
     CoinMarketCap API client with rate limiting and error handling
-    
+
     Features:
     - Rate limiting (30 calls/minute for free tier)
     - Exponential backoff retry logic
     - Response caching to minimize API calls
     - Comprehensive error handling and logging
     """
-    
+
     def __init__(self, api_key: Optional[str] = None, cache_ttl: int = 300):
         self.base_url = "https://pro-api.coinmarketcap.com"
         self.session = requests.Session()
@@ -46,7 +50,9 @@ class CoinMarketCapClient:
         self.cache_ttl = cache_ttl
         self.max_retries = 3
         self.base_delay = 1
-        logger.info(f"CoinMarketCap client initialized with {self.calls_per_minute} calls/minute limit")
+        logger.info(
+            f"CoinMarketCap client initialized with {self.calls_per_minute} calls/minute limit"
+        )
 
     def _enforce_rate_limit(self):
         now = time.time()
@@ -88,30 +94,40 @@ class CoinMarketCapClient:
                 logger.debug(f"Making request to {endpoint} (attempt {attempt + 1})")
                 response = self.session.get(url, params=params, timeout=30)
                 if response.status_code == 429:
-                    retry_after = int(response.headers.get('Retry-After', 60))
-                    logger.warning(f"Server rate limit hit. Waiting {retry_after} seconds")
+                    retry_after = int(response.headers.get("Retry-After", 60))
+                    logger.warning(
+                        f"Server rate limit hit. Waiting {retry_after} seconds"
+                    )
                     time.sleep(retry_after)
                     continue
                 response.raise_for_status()
                 data = response.json()
-                logger.info(f"CoinMarketCap API response for {endpoint}: {json.dumps(data)[:1000]}")
+                logger.info(
+                    f"CoinMarketCap API response for {endpoint}: {json.dumps(data)[:1000]}"
+                )
                 self.cache[cache_key] = (data, time.time())
                 logger.debug(f"Successfully fetched {endpoint}")
                 return data
             except requests.exceptions.RequestException as e:
                 if attempt == self.max_retries:
-                    logger.error(f"Request failed after {self.max_retries + 1} attempts: {e}")
+                    logger.error(
+                        f"Request failed after {self.max_retries + 1} attempts: {e}"
+                    )
                     raise APIError(f"Request failed: {e}")
-                delay = self.base_delay * (2 ** attempt)
-                logger.warning(f"Request failed (attempt {attempt + 1}), retrying in {delay}s: {e}")
+                delay = self.base_delay * (2**attempt)
+                logger.warning(
+                    f"Request failed (attempt {attempt + 1}), retrying in {delay}s: {e}"
+                )
                 time.sleep(delay)
         raise APIError("Max retries exceeded")
 
-    def get_listings_latest(self, start: int = 1, limit: int = 100, convert: str = "USD") -> List[Dict]:
+    def get_listings_latest(
+        self, start: int = 1, limit: int = 100, convert: str = "USD"
+    ) -> List[Dict]:
         try:
             params = {"start": start, "limit": limit, "convert": convert}
             response = self._make_request("v1/cryptocurrency/listings/latest", params)
-            coins = response.get('data', [])
+            coins = response.get("data", [])
             logger.info(f"Fetched {len(coins)} coins from CoinMarketCap")
             return coins
         except Exception as e:
@@ -122,7 +138,7 @@ class CoinMarketCapClient:
         try:
             params = {"symbol": symbol, "convert": convert}
             response = self._make_request("v2/cryptocurrency/quotes/latest", params)
-            data = response.get('data', {})
+            data = response.get("data", {})
             logger.info(f"Fetched quote for {symbol} from CoinMarketCap")
             return data
         except Exception as e:
@@ -136,7 +152,8 @@ class CoinMarketCapClient:
     def get_cache_stats(self) -> Dict:
         total_entries = len(self.cache)
         valid_entries = sum(
-            1 for _, (_, timestamp) in self.cache.items() 
+            1
+            for _, (_, timestamp) in self.cache.items()
             if self._is_cache_valid(timestamp)
         )
         cache_hit_rate = (valid_entries / max(total_entries, 1)) * 100
@@ -144,5 +161,5 @@ class CoinMarketCapClient:
             "total_entries": total_entries,
             "valid_entries": valid_entries,
             "cache_hit_rate": f"{cache_hit_rate:.1f}%",
-            "cache_ttl_seconds": self.cache_ttl
+            "cache_ttl_seconds": self.cache_ttl,
         }

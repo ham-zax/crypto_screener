@@ -3,6 +3,7 @@
 from src.database.config import get_session
 from src.models.automated_project import AutomatedProject
 
+
 def main():
     session = get_session()
     try:
@@ -22,6 +23,7 @@ def main():
             print()
     finally:
         session.close()
+
 
 if __name__ == "__main__":
     main()

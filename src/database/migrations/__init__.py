@@ -14,4 +14,4 @@ Key Features:
 from .migration_runner import MigrationRunner
 from .version_manager import VersionManager
 
-__all__ = ['MigrationRunner', 'VersionManager']
+__all__ = ["MigrationRunner", "VersionManager"]

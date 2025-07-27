@@ -5,17 +5,22 @@ Handles business logic and orchestration related to the AutomatedProject model.
 This decouples the business logic from the data model, following the
 Service Layer architectural pattern.
 """
+
 import logging
 from datetime import datetime
 from ..models.automated_project import AutomatedProject
-from ..scoring.automated_scoring import AutomatedScoringEngine
 
 logger = logging.getLogger(__name__)
+
 
 def _calculate_narrative_score(project: AutomatedProject) -> None:
     """Calculate Narrative Score as average of components (AS-01)"""
     logger.debug(f"Calculating narrative score for project {project.id}")
-    components = [project.sector_strength, project.value_proposition, project.backing_team]
+    components = [
+        project.sector_strength,
+        project.value_proposition,
+        project.backing_team,
+    ]
     valid_components = [c for c in components if c is not None]
     if not valid_components:
         project.narrative_score = None
@@ -24,10 +29,15 @@ def _calculate_narrative_score(project: AutomatedProject) -> None:
     project.narrative_score = sum(valid_components) / len(valid_components)
     logger.debug(f"Narrative score set to {project.narrative_score}")
 
+
 def _calculate_tokenomics_score(project: AutomatedProject) -> None:
     """Calculate Tokenomics Score as average of components (AS-02)"""
     logger.debug(f"Calculating tokenomics score for project {project.id}")
-    components = [project.valuation_potential, project.token_utility, project.supply_risk]
+    components = [
+        project.valuation_potential,
+        project.token_utility,
+        project.supply_risk,
+    ]
     valid_components = [c for c in components if c is not None]
     if not valid_components:
         project.tokenomics_score = None
@@ -35,6 +45,7 @@ def _calculate_tokenomics_score(project: AutomatedProject) -> None:
         return
     project.tokenomics_score = sum(valid_components) / len(valid_components)
     logger.debug(f"Tokenomics score set to {project.tokenomics_score}")
+
 
 def _calculate_data_score(project: AutomatedProject) -> None:
     """Set Data Score equal to Accumulation Signal (AS-03)"""
@@ -47,6 +58,7 @@ def _calculate_data_score(project: AutomatedProject) -> None:
         project.data_score = None
         project.has_data_score = False
         logger.debug("No accumulation signal found; data score set to None.")
+
 
 def update_all_scores(project: AutomatedProject) -> AutomatedProject:
     """

@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from celery.exceptions import NotRegistered
 from src.tasks.task_manager import TaskManager
 
+
 class TestTaskManager(unittest.TestCase):
     def setUp(self):
         self.manager = TaskManager()
@@ -28,9 +29,8 @@ class TestTaskManager(unittest.TestCase):
         self.assertEqual(status["task_id"], "fake_id")
         self.assertEqual(status["status"], "FAILURE")
         # Should not raise serialization error, should be string or handled
-        self.assertTrue(
-            isinstance(status["result"], str) or status["result"] is None
-        )
+        self.assertTrue(isinstance(status["result"], str) or status["result"] is None)
+
 
 if __name__ == "__main__":
     unittest.main()
